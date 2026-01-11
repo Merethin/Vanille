@@ -5,7 +5,7 @@ use log::warn;
 use crate::bot::Data;
 
 pub async fn reminders_task(ctx: Context, data: Data) {
-    let mut ticker = tokio::time::interval(Duration::from_mins(1));
+    let mut ticker = tokio::time::interval(Duration::from_secs(60));
 
     loop {
         ticker.tick().await;
