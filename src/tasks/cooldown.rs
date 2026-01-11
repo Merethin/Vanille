@@ -54,8 +54,6 @@ pub async fn cooldown_task(ctx: Context, data: Data) {
             session.try_send_new_telegram(&ctx, &data).await.unwrap_or_else(|err| {
                 warn!("Error triggering session update: {err}");
             });
-
-            tokio::time::sleep(Duration::from_millis(250)).await;
         }
     }
 }
