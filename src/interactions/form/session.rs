@@ -1,7 +1,7 @@
 use std::collections::hash_map::Entry;
 use serenity::all::{
     CacheHttp, ComponentInteraction, Context, CreateActionRow, CreateInputText, CreateInteractionResponse, 
-    CreateModal, InputTextStyle, ModalInteraction, ActionRowComponent, CreateMessage
+    CreateModal, InputTextStyle, ModalInteraction, ActionRowComponent, CreateMessage, Timestamp, UserId
 };
 
 use crate::api::calculate_telegram_delay;
@@ -103,9 +103,18 @@ pub async fn process_session_form(
         },
     }
 
+    // Add a 10-second cooldown before the first telegram, to avoid 
+    // triggering "You are opening DMs too fast" when messaging new users for the first time
+    let cooldown = Timestamp::now().timestamp() + SESSION_TELEGRAM_BUFFER;
+
     let (embed, components) = create_session_start_embed(
         &user_data.nation,
         &delay
+    );
+
+    data.inner.cooldowns.lock().await.insert(
+        (UserId::new(user_data.user_id), user_data.nation.clone()), 
+        (cooldown, None)
     );
 
     modal.user.direct_message(
