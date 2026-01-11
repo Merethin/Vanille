@@ -1,0 +1,6 @@
+[input]
+url = "amqp://guest:guest@0.0.0.0:5672"
+exchange_name = "akari_events"
+
+[database]
+url = "postgres://postgres:postgres@127.0.0.1"
