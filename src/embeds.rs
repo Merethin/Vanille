@@ -1,4 +1,3 @@
-use uuid::Uuid;
 use itertools::Itertools;
 use serenity::all::{ButtonStyle, ChannelId, ChannelType, CreateActionRow, CreateButton, CreateEmbed, CreateSelectMenu, CreateSelectMenuKind, FormattedTimestamp, FormattedTimestampStyle, Mentionable, RoleId};
 
@@ -17,16 +16,14 @@ pub fn create_queue_embed(
         ("Last Telegram Sent", FormattedTimestamp::new(queue.last_telegram_sent(), Some(FormattedTimestampStyle::RelativeTime)).to_string(), false),
     ]);
 
-    let key = Uuid::new_v4().to_string();
-
     let components = vec![
         CreateActionRow::Buttons(vec![
-            CreateButton::new(format!("recruit-oneshot:{}", key)).label("Recruit: Oneshot"),
-            CreateButton::new(format!("recruit-stream:{}", key)).label("Recruit: Stream"),
+            CreateButton::new("recruit-oneshot").label("Recruit: Oneshot"),
+            CreateButton::new("recruit-stream").label("Recruit: Stream"),
         ]),
         CreateActionRow::Buttons(vec![
-            CreateButton::new(format!("setup:{}", key)).label("Setup Templates").style(ButtonStyle::Danger),
-            CreateButton::new(format!("statistics:{}", key)).label("Statistics").emoji('📊').style(ButtonStyle::Success),
+            CreateButton::new("setup").label("Setup Templates").style(ButtonStyle::Danger),
+            CreateButton::new("statistics").label("Statistics").emoji('📊').style(ButtonStyle::Success),
         ]),
     ];
 
@@ -134,8 +131,6 @@ pub fn create_edit_queue_embed(
         ), false
     );
 
-    let key = Uuid::new_v4().to_string();
-
     (embed, vec![
         CreateActionRow::SelectMenu(
             CreateSelectMenu::new("edit-queue-role", CreateSelectMenuKind::Role { default_roles: None }).placeholder(
@@ -150,15 +145,15 @@ pub fn create_edit_queue_embed(
             ),
         ),
         CreateActionRow::Buttons(vec![
-            CreateButton::new(format!("edit-queue-size:{}", key)).label("Edit Size"),
-            CreateButton::new(format!("edit-queue-regions:{}", key)).label("Edit Excluded Regions")
+            CreateButton::new("edit-queue-size").label("Edit Size"),
+            CreateButton::new("edit-queue-regions").label("Edit Excluded Regions")
         ]),
         CreateActionRow::Buttons(vec![
-            CreateButton::new(format!("edit-queue-threshold:{}", key)).label("Edit Threshold"),
-            CreateButton::new(format!("delete-queue-threshold:{}", key)).label("Delete Threshold").style(ButtonStyle::Danger)
+            CreateButton::new("edit-queue-threshold").label("Edit Threshold"),
+            CreateButton::new("delete-queue-threshold").label("Delete Threshold").style(ButtonStyle::Danger)
         ]),
         CreateActionRow::Buttons(vec![
-            CreateButton::new(format!("clear-queue-role-channel:{}", key)).label("Clear Role and Channel").style(ButtonStyle::Danger)
+            CreateButton::new("clear-queue-role-channel").label("Clear Role and Channel").style(ButtonStyle::Danger)
         ]),
     ])
 }
