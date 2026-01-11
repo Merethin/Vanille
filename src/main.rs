@@ -40,13 +40,24 @@ async fn main() -> Result<(), Box<dyn Error>> {
         config::Config::default()
     });
 
+    let rabbitmq_url = std::env::var("RABBITMQ_URL").unwrap_or_else(|err| {
+        error!("Missing RABBITMQ_URL environment variable: {err}");
+        exit(1);
+    });
+
     let conn = lapin::Connection::connect(
-        &config.input.url,
+        &rabbitmq_url,
         lapin::ConnectionProperties::default(),
     ).await?;
-
+    
     let channel = conn.create_channel().await?;
-    let pool = sqlx::PgPool::connect(&config.database.url).await.unwrap_or_else(|err| {
+
+    let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|err| {
+        error!("Missing DATABASE_URL environment variable: {err}");
+        exit(1);
+    });
+
+    let pool = sqlx::PgPool::connect(&db_url).await.unwrap_or_else(|err| {
         error!("Error connecting to Postgres: {}", err);
         exit(1);
     });

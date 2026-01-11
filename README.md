@@ -34,23 +34,19 @@ A running PostgreSQL database (with tables already created, the code for them is
 
 ## Configuration
 
-The config file (located at `config/vanille.toml`) has two sections:
+The config file (located at `config/vanille.toml`) has one section, for now:
 
 #### Input
 ```
 [input]
-url = "amqp://guest:guest@0.0.0.0:5672"
 exchange_name = "akari_events"
 ```
 
-For the input section, specify the URL of the RabbitMQ instance as well as the exchange name to listen for Akari events on.
+For the input section, specify the exchange name to listen for Akari events on.
 
-#### Database
-```
-[database]
-url = "postgres://postgres:postgres@127.0.0.1"
-```
-For the database section, specify the URL of the Postgres database to connect to.
+The RabbitMQ url as well as the Postgres database url should be specified in the environment or .env file as `RABBITMQ_URL` and `DATABASE_URL` respectively.
+
+The discord bot token must also be in the environment as `DISCORD_TOKEN`.
 
 ## Setup
 
@@ -58,16 +54,30 @@ For the database section, specify the URL of the Postgres database to connect to
 
 Run `cargo build --release` to compile the program. You'll need a recent version of Rust.
 
-Run it with `NS_USER_AGENT=[YOUR MAIN NATION NAME] ./target/release/vanille`.
+Run it with `NS_USER_AGENT=[YOUR MAIN NATION NAME] ./target/release/vanille` (with the appropriate variables in .env).
 
 Alternatively, you can set up a Docker container.
 
 Building it: `docker build --tag vanille .`
 
-Running it: `docker run -e NS_USER_AGENT=[YOUR MAIN NATION NAME] vanille`
+Running it: 
+```
+docker run \
+    -e NS_USER_AGENT=[YOUR MAIN NATION NAME] \
+    -e RABBITMQ_URL=[...] \
+    -e DATABASE_URL=[...] \
+    -e DISCORD_TOKEN=[...] vanille
+```
 
 Note: to pass your config file over to Vanille, you must bind mount the directory it is in:
 
-`docker run -e NS_USER_AGENT=[YOUR MAIN NATION NAME] -v ./config:/config vanille`
+```
+docker run \
+    -e NS_USER_AGENT=[YOUR MAIN NATION NAME] \
+    -e RABBITMQ_URL=[...] \
+    -e DATABASE_URL=[...] \
+    -e DISCORD_TOKEN=[...] \
+    -v ./config:/config vanille
+```
 
 Inside Docker, Vanille looks for the config file in `/config/vanille.toml`. If it isn't behaving like you expect, make sure the file is present/mounted in some way.
