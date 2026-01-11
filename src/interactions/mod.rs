@@ -24,7 +24,11 @@ pub fn check_interaction_authorization(member: &Option<Member>) -> Option<&'stat
 pub async fn handle_component_interaction(
     ctx: &Context, data: &Data, component: &ComponentInteraction
 ) -> Result<(), Error> {
-    match component.data.custom_id.as_str() {
+    let (custom_id, _) = component.data.custom_id.split_once(':').unwrap_or(
+        (component.data.custom_id.as_str(), "")
+    );
+
+    match custom_id {
         // Main embed buttons
         "recruit-oneshot" => click::handle_recruit_oneshot(ctx, data, component).await,
         "recruit-stream" => form::spawn_session_form(ctx, data, component).await,
