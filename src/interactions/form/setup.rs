@@ -8,6 +8,8 @@ use crate::api::query_nation_data;
 use crate::bot::{Data, Error, util::{self, Modal}};
 use crate::models::user_data::UserData;
 
+use sqlx::Row;
+
 pub async fn spawn_setup_form(
     ctx: &Context, _: &Data, component: &ComponentInteraction
 ) -> Result<(), Error> {
@@ -92,12 +94,29 @@ pub async fn process_setup_form(
             data.foundedtime
         },
         Err(err) => {
-            util::edit_reply(
-                ctx, util::Modal(modal), 
-                &format!("API error querying data for {}: {}", nation, err)
-            ).await?;
+            // Temporary fix while the API is down - try to query foundedtime from a Swash datadump table
+            if let Ok(result) = sqlx::query(
+                "SELECT firstlogin FROM nations_dump WHERE canon_name = $1"
+            ).bind(&nation).fetch_one(&data.inner.pool).await {
+                match result.try_get::<i64, usize>(0) {
+                    Ok(foundedtime) => foundedtime,
+                    Err(err) => {
+                        util::edit_reply(
+                            ctx, util::Modal(modal), 
+                            &format!("Nation {} not found in database query: {}", nation, err)
+                        ).await?;
 
-            return Ok(());
+                        return Ok(());
+                    }
+                }
+            } else {
+                util::edit_reply(
+                    ctx, util::Modal(modal), 
+                    &format!("API error querying data for {}: {}", nation, err)
+                ).await?;
+
+                return Ok(());
+            }
         }
     };
 
