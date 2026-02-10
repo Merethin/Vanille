@@ -4,6 +4,16 @@ use log::warn;
 
 use crate::bot::Data;
 
+#[derive(PartialEq)]
+enum SessionAction {
+    SendTelegram,
+    EnactPause,
+    Close,
+}
+
+const SESSION_PAUSE_DELAY: i64 = 10 * 60; // Session is paused 10 min after the last activity check is passed
+const INACTIVITY_CLOSE_DELAY: i64 = 5 * 60; // Session is closed 5 min after the last activity check is presented and not responded to
+
 pub async fn cooldown_task(ctx: Context, data: Data) {
     let mut ticker = tokio::time::interval(Duration::from_secs(1));
 
@@ -40,20 +50,55 @@ pub async fn cooldown_task(ctx: Context, data: Data) {
         }
 
         let sessions_to_update = {
-            let sessions = data.inner.sessions.lock().await;
+            let mut sessions = data.inner.sessions.lock().await;
 
-            sessions.values().flat_map(|session| {
-                if extant_cooldowns.contains(
-                    &(session.user, session.nation.clone())
-                ) { None }
-                else { Some(session.clone()) }
-            }).collect::<Vec<_>>()
+            let result = sessions.values_mut().flat_map(|session| {
+                if let Some(pause_time) = session.pause_time {
+                    if (Timestamp::now().timestamp() - pause_time.timestamp()) > INACTIVITY_CLOSE_DELAY {
+                        // Session activity check expired
+                        Some((session.clone(), SessionAction::Close))
+                    } else {
+                        // Session is paused
+                        None
+                    }
+                } else {
+                    if extant_cooldowns.contains(&(session.user, session.nation.clone())) { 
+                        // Cooldown still in progress
+                        None
+                    } else {
+                        if (Timestamp::now().timestamp() - session.last_activity_check.timestamp()) > SESSION_PAUSE_DELAY {
+                            // Time for a session activity check
+                            session.pause_time = Some(Timestamp::now());
+                            Some((session.clone(), SessionAction::EnactPause))
+                        } else {
+                            // Send batch
+                            Some((session.clone(), SessionAction::SendTelegram))
+                        }
+                    }
+                }
+            }).collect::<Vec<_>>();
+
+            for (session, action) in &result {
+                if *action == SessionAction::Close {
+                    sessions.remove(&session.user);
+                }
+            }
+
+            result
         };
 
-        for session in sessions_to_update {
-            session.try_send_new_telegram(&ctx, &data).await.unwrap_or_else(|err| {
-                warn!("Error triggering session update: {err}");
-            });
+        for (session, action) in sessions_to_update {
+            match action {
+                SessionAction::SendTelegram => session.try_send_new_telegram(&ctx, &data).await.unwrap_or_else(|err| {
+                    warn!("Error triggering session update: {err}");
+                }),
+                SessionAction::EnactPause => session.inactivity_pause(&ctx).await.unwrap_or_else(|err| {
+                    warn!("Error triggering session pause: {err}");
+                }),
+                SessionAction::Close => session.inactivity_close(&ctx).await.unwrap_or_else(|err| {
+                    warn!("Error triggering session close: {err}");
+                }),
+            }
         }
     }
 }

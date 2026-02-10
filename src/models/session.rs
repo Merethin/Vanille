@@ -4,6 +4,7 @@ use rand::seq::IndexedRandom;
 use serenity::all::{CacheHttp, CreateMessage, Context, UserId, ChannelId, Timestamp};
 
 use crate::api::calculate_telegram_delay;
+use crate::embeds::create_pause_embed;
 use crate::{embeds::create_telegram_embed, models::report::ReportEntry};
 use crate::bot::{Data, Error};
 
@@ -19,6 +20,8 @@ pub struct Session {
     pub queue: ChannelId,
     pub nation: String,
     pub delay: RecruitDelay,
+    pub last_activity_check: Timestamp,
+    pub pause_time: Option<Timestamp>,
 }
 
 pub const SESSION_TELEGRAM_BUFFER: i64 = 10; // 10 seconds past normal telegram cooldown
@@ -116,6 +119,28 @@ impl Session {
                 Timestamp::now()
             ).insert(&data.inner.pool).await;
         }
+
+        Ok(())
+    }
+
+    pub async fn inactivity_pause(
+        &self, ctx: &Context
+    ) -> Result<(), Error> {
+        let (embed, components) = create_pause_embed();
+
+        self.user.direct_message(
+            ctx.http(), CreateMessage::new().embed(embed).components(components)
+        ).await?;
+
+        Ok(())
+    }
+
+    pub async fn inactivity_close(
+        &self, ctx: &Context
+    ) -> Result<(), Error> {
+        self.user.direct_message(
+            ctx.http(), CreateMessage::new().content("Session closed for inactivity.")
+        ).await?;
 
         Ok(())
     }

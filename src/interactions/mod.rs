@@ -36,6 +36,7 @@ pub async fn handle_component_interaction(
         "stat-leaders-custom" => form::spawn_stat_time_form(ctx, data, component, "stat-leaders-custom-report").await,
         "stat-csv-custom" => form::spawn_stat_time_form(ctx, data, component, "stat-csv-custom-report").await,
         // Session DM buttons
+        "stream-resume" => click::handle_stream_resume(ctx, data, component).await,
         "stream-end" => click::handle_stream_end(ctx, data, component).await,
         // Queue editing buttons
         "edit-queue-size" => form::spawn_queue_size_form(ctx, data, component).await,

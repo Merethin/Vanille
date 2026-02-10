@@ -98,7 +98,10 @@ pub async fn process_session_form(
         },
         Entry::Vacant(v) => {
             v.insert(Session { 
-                user: modal.user.id, queue: modal.channel_id, nation: user_data.nation.clone(), delay: delay.clone() 
+                user: modal.user.id, queue: modal.channel_id, 
+                nation: user_data.nation.clone(), delay: delay.clone(),
+                last_activity_check: Timestamp::now(),
+                pause_time: None,
             });
         },
     }

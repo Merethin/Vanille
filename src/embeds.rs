@@ -63,6 +63,19 @@ pub fn create_telegram_embed(
     (embed, vec![CreateActionRow::Buttons(row)])
 }
 
+pub fn create_pause_embed() -> (CreateEmbed, Vec<CreateActionRow>) {
+    let embed = CreateEmbed::new().title("Still Here?").description(
+        "Recruitment session has been paused. Click Continue to resume it. Otherwise, the session will automatically be closed for inactivity in 5 minutes."
+    );
+
+    let row = vec![
+        CreateButton::new("stream-resume").style(ButtonStyle::Success).label("Continue"),
+        CreateButton::new("stream-end").style(ButtonStyle::Danger).label("Stop Session")
+    ];
+
+    (embed, vec![CreateActionRow::Buttons(row)])
+}
+
 pub fn create_statistics_embed() -> (CreateEmbed, Vec<CreateActionRow>) {
     let embed = CreateEmbed::new().title("Recruitment Statistics");
 
