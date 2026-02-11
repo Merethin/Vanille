@@ -1,5 +1,6 @@
 use std::{collections::{HashSet, HashMap}, time::Duration};
 use serenity::all::{CacheHttp, Context, ComponentInteraction, UserId, Timestamp};
+use rand::seq::SliceRandom;
 use log::warn;
 
 use crate::bot::Data;
@@ -52,7 +53,7 @@ pub async fn cooldown_task(ctx: Context, data: Data) {
         let sessions_to_update = {
             let mut sessions = data.inner.sessions.lock().await;
 
-            let result = sessions.values_mut().flat_map(|session| {
+            let mut result = sessions.values_mut().flat_map(|session| {
                 if let Some(pause_time) = session.pause_time {
                     if (Timestamp::now().timestamp() - pause_time.timestamp()) > INACTIVITY_CLOSE_DELAY {
                         // Session activity check expired
@@ -83,6 +84,9 @@ pub async fn cooldown_task(ctx: Context, data: Data) {
                     sessions.remove(&session.user);
                 }
             }
+
+            let mut rng = rand::rng();
+            result.shuffle(&mut rng);
 
             result
         };
