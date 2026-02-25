@@ -12,7 +12,7 @@ enum SessionAction {
     Close,
 }
 
-const SESSION_PAUSE_DELAY: i64 = 10 * 60; // Session is paused 10 min after the last activity check is passed
+const SESSION_PAUSE_DELAY: i64 = 20 * 60; // Session is paused 10 min after the last activity check is passed
 const INACTIVITY_CLOSE_DELAY: i64 = 5 * 60; // Session is closed 5 min after the last activity check is presented and not responded to
 
 pub async fn cooldown_task(ctx: Context, data: Data) {
