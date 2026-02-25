@@ -99,7 +99,7 @@ pub async fn process_session_form(
         Entry::Vacant(v) => {
             v.insert(Session { 
                 user: modal.user.id, queue: modal.channel_id, 
-                nation: user_data.nation.clone(), delay: delay.clone(),
+                delay: delay.clone(),
                 last_activity_check: Timestamp::now(),
                 pause_time: None,
             });
@@ -116,7 +116,7 @@ pub async fn process_session_form(
     );
 
     data.inner.cooldowns.lock().await.insert(
-        (UserId::new(user_data.user_id), user_data.nation.clone()), 
+        UserId::new(user_data.user_id), 
         (cooldown, None)
     );
 

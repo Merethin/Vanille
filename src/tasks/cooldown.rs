@@ -18,8 +18,8 @@ const INACTIVITY_CLOSE_DELAY: i64 = 5 * 60; // Session is closed 5 min after the
 pub async fn cooldown_task(ctx: Context, data: Data) {
     let mut ticker = tokio::time::interval(Duration::from_secs(1));
 
-    let mut extant_cooldowns: HashSet<(UserId, String)> = HashSet::new();
-    let mut expired_cooldowns: HashMap<(UserId, String), Option<ComponentInteraction>> = HashMap::new();
+    let mut extant_cooldowns: HashSet<UserId> = HashSet::new();
+    let mut expired_cooldowns: HashMap<UserId, Option<ComponentInteraction>> = HashMap::new();
 
     loop {
         ticker.tick().await;
@@ -63,7 +63,7 @@ pub async fn cooldown_task(ctx: Context, data: Data) {
                         None
                     }
                 } else {
-                    if extant_cooldowns.contains(&(session.user, session.nation.clone())) { 
+                    if extant_cooldowns.contains(&session.user) { 
                         // Cooldown still in progress
                         None
                     } else {

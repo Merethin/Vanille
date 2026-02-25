@@ -19,7 +19,7 @@ pub struct InnerData {
     pub queues: Mutex<HashMap<ChannelId, Queue>>,
     pub sessions: Mutex<HashMap<UserId, Session>>,
     pub user_data: Mutex<HashMap<(ChannelId, UserId), UserData>>,
-    pub cooldowns: Mutex<HashMap<(UserId, String), (i64, Option<ComponentInteraction>)>>,
+    pub cooldowns: Mutex<HashMap<UserId, (i64, Option<ComponentInteraction>)>>,
     pub channel: lapin::Channel,
     pub config: Config,
     pub api_client: Client,

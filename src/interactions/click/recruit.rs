@@ -29,7 +29,7 @@ pub async fn handle_recruit_oneshot(
     };
 
     if data.inner.cooldowns.lock().await.contains_key(
-        &(UserId::new(user_data.user_id), user_data.nation.clone())
+        &UserId::new(user_data.user_id)
     ) {
         util::edit_reply(ctx, Component(component), "Error: cooldown still in progress.").await?;
 
@@ -80,7 +80,7 @@ pub async fn handle_recruit_oneshot(
     );
 
     data.inner.cooldowns.lock().await.insert(
-        (UserId::new(user_data.user_id), user_data.nation.clone()), 
+        UserId::new(user_data.user_id), 
         (cooldown, Some(component.clone()))
     );
 

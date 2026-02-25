@@ -18,7 +18,6 @@ pub enum RecruitDelay {
 pub struct Session {
     pub user: UserId,
     pub queue: ChannelId,
-    pub nation: String,
     pub delay: RecruitDelay,
     pub last_activity_check: Timestamp,
     pub pause_time: Option<Timestamp>,
@@ -94,7 +93,7 @@ impl Session {
         );
 
         data.inner.cooldowns.lock().await.insert(
-            (UserId::new(user_data.user_id), user_data.nation.clone()), 
+            UserId::new(user_data.user_id), 
             (cooldown, None)
         );
 
