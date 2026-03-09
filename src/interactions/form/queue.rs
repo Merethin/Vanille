@@ -271,7 +271,7 @@ pub async fn process_queue_filter_form(
     };
 
     queue.filter.regexes = filters.and_then(|v| 
-        Some(v.split("\n").filter_map(|s| Regex::new(&s).ok()).collect())
+        Some(v.split("\n").map(|s| s.trim()).filter(|s| s.is_empty()).filter_map(|s| Regex::new(&s).ok()).collect())
     ).unwrap_or(vec![]);
 
     queue.insert(&data.inner.pool).await;

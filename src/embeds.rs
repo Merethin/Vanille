@@ -145,7 +145,7 @@ pub fn create_edit_queue_embed(
             "None (reminders won't be sent)".into(), |channel| channel.mention().to_string()
         ), false
     ).field(
-        "Regex Filters", regex_filters.iter().map(|v| format!("`{}`", v.as_str())).join("\n"), false
+        "Regex Filters", if regex_filters.is_empty() { "None".into() } else { regex_filters.iter().map(|v| format!("`{}`", v.as_str())).join("\n") }, false
     );
 
     (embed, vec![
