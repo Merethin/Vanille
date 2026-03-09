@@ -267,7 +267,7 @@ impl Queue {
                 fill_threshold = EXCLUDED.fill_threshold,
                 time_threshold = EXCLUDED.time_threshold,
                 ping_channel = EXCLUDED.ping_channel,
-                ping_role = EXCLUDED.ping_role
+                ping_role = EXCLUDED.ping_role,
                 regex_filters = EXCLUDED.regex_filters"
             ).bind(self.channel.get() as i64)
             .bind(self.message.get() as i64)
