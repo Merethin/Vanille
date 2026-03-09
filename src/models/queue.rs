@@ -218,7 +218,7 @@ impl Queue {
     ) -> Result<HashMap<ChannelId, Queue>, sqlx::Error> {
         let vec = sqlx::query(
        "SELECT channel_id, message_id, region, size, excluded_regions, 
-            fill_threshold, time_threshold, ping_channel, ping_role FROM queues"
+            fill_threshold, time_threshold, ping_channel, ping_role, regex_filters FROM queues"
         ).fetch_all(pool).await?;
 
         let mut map = HashMap::new();
