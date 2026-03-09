@@ -23,7 +23,7 @@ pub async fn edit_queue(
     };
 
     let (embed, components) = create_edit_queue_embed(
-        &queue.region, queue.size, &queue.filter.regions, &queue.thresholds, &queue.ping_channel, &queue.ping_role
+        &queue.region, queue.size, &queue.filter.regions, &queue.thresholds, &queue.ping_channel, &queue.ping_role, &queue.filter.regexes
     );
 
     drop(queues);

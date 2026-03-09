@@ -1,4 +1,5 @@
 use log::warn;
+use regex::Regex;
 use uuid::Uuid;
 use serenity::all::{
     CacheHttp, ComponentInteraction, Context, CreateActionRow, CreateInputText, CreateInteractionResponse, 
@@ -71,6 +72,25 @@ pub async fn spawn_queue_threshold_form(
     Ok(())
 }
 
+pub async fn spawn_queue_filter_form(
+    ctx: &Context, data: &Data, component: &ComponentInteraction
+) -> Result<(), Error> {
+    let key = Uuid::new_v4().to_string();
+    data.inner.interaction_tokens.lock().await.insert(key.clone(), component.token.clone());
+
+    component.create_response(ctx.http(), CreateInteractionResponse::Modal(
+        CreateModal::new(format!("queue-filter-modal:{}", key), "Edit Filters").components(
+            vec![CreateActionRow::InputText(
+                CreateInputText::new(
+                    InputTextStyle::Paragraph, "Regex Filters", "filters"
+                ).placeholder("One pattern per line, leave empty to clear the list").required(false)
+            )]
+        )
+    )).await?;
+
+    Ok(())
+}
+
 pub async fn process_queue_size_form(
      ctx: &Context, data: &Data, modal: &ModalInteraction, key: &str
 ) -> Result<(), Error> {
@@ -127,7 +147,7 @@ pub async fn process_queue_size_form(
     queue.insert(&data.inner.pool).await;
 
     let (embed, components) = create_edit_queue_embed(
-        &queue.region, queue.size, &queue.filter.regions, &queue.thresholds, &queue.ping_channel, &queue.ping_role
+        &queue.region, queue.size, &queue.filter.regions, &queue.thresholds, &queue.ping_channel, &queue.ping_role, &queue.filter.regexes
     );
 
     if let Err(err) = ctx.http().edit_original_interaction_response(
@@ -192,7 +212,72 @@ pub async fn process_queue_regions_form(
     queue.insert(&data.inner.pool).await;
 
     let (embed, components) = create_edit_queue_embed(
-        &queue.region, queue.size, &queue.filter.regions, &queue.thresholds, &queue.ping_channel, &queue.ping_role
+        &queue.region, queue.size, &queue.filter.regions, &queue.thresholds, &queue.ping_channel, &queue.ping_role, &queue.filter.regexes
+    );
+
+    if let Err(err) = ctx.http().edit_original_interaction_response(
+        &token, 
+        &EditInteractionResponse::new().embed(embed).components(components), 
+        vec![]
+    ).await {
+        warn!("Error while editing interaction message: {err}");
+    }
+
+    modal.delete_response(ctx.http()).await?;
+
+    Ok(())
+}
+
+pub async fn process_queue_filter_form(
+     ctx: &Context, data: &Data, modal: &ModalInteraction, key: &str
+) -> Result<(), Error> {
+    if let Some(message) = check_interaction_authorization(&modal.member) {
+        util::direct_reply(ctx, Modal(modal), message, true).await?;
+        return Ok(());
+    }
+
+    let components = &modal.data.components;
+    util::defer_ephemeral(ctx, Modal(modal)).await?;
+
+    let Some(token) = data.inner.interaction_tokens.lock().await.remove(key) else {
+        util::edit_reply(
+            ctx, Modal(modal), "Error: invalid interaction"
+        ).await?;
+
+        return Ok(());
+    };
+
+    let mut filters = None;
+
+    for row in components {
+        for component in &row.components {
+            if let ActionRowComponent::InputText(input) = component {
+                match input.custom_id.as_str() {
+                    "filters" => filters = input.value.clone(),
+                    _ => {}
+                }
+            }
+        }
+    }
+
+    let mut queues = data.inner.queues.lock().await;
+
+    let Some(queue) = queues.get_mut(&modal.channel_id) else {
+        util::edit_reply(
+            ctx, Modal(modal), "There is no queue set up in this channel!"
+        ).await?;
+        
+        return Ok(());
+    };
+
+    queue.filter.regexes = filters.and_then(|v| 
+        Some(v.split("\n").filter_map(|s| Regex::new(&s).ok()).collect())
+    ).unwrap_or(vec![]);
+
+    queue.insert(&data.inner.pool).await;
+
+    let (embed, components) = create_edit_queue_embed(
+        &queue.region, queue.size, &queue.filter.regions, &queue.thresholds, &queue.ping_channel, &queue.ping_role, &queue.filter.regexes
     );
 
     if let Err(err) = ctx.http().edit_original_interaction_response(
@@ -276,7 +361,7 @@ pub async fn process_queue_threshold_form(
     queue.insert(&data.inner.pool).await;
 
     let (embed, components) = create_edit_queue_embed(
-        &queue.region, queue.size, &queue.filter.regions, &queue.thresholds, &queue.ping_channel, &queue.ping_role
+        &queue.region, queue.size, &queue.filter.regions, &queue.thresholds, &queue.ping_channel, &queue.ping_role, &queue.filter.regexes
     );
 
     if let Err(err) = ctx.http().edit_original_interaction_response(

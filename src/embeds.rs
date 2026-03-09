@@ -1,4 +1,5 @@
 use itertools::Itertools;
+use regex::Regex;
 use serenity::all::{ButtonStyle, ChannelId, ChannelType, CreateActionRow, CreateButton, CreateEmbed, CreateSelectMenu, CreateSelectMenuKind, FormattedTimestamp, FormattedTimestampStyle, Mentionable, RoleId};
 
 use caramel::ns::{UserAgent, format::prettify_name};
@@ -123,6 +124,7 @@ pub fn create_edit_queue_embed(
     thresholds: &Option<(u64, u64)>,
     ping_channel: &Option<ChannelId>,
     ping_role: &Option<RoleId>,
+    regex_filters: &Vec<Regex>,
 ) -> (CreateEmbed, Vec<CreateActionRow>) {
     let embed = CreateEmbed::new().title(
         format!("Editing Queue: {}", prettify_name(&region))
@@ -142,6 +144,8 @@ pub fn create_edit_queue_embed(
         "Reminder Channel", ping_channel.map_or(
             "None (reminders won't be sent)".into(), |channel| channel.mention().to_string()
         ), false
+    ).field(
+        "Regex Filters", regex_filters.iter().map(|v| format!("`{}`", v.as_str())).join("\n"), false
     );
 
     (embed, vec![
@@ -159,7 +163,8 @@ pub fn create_edit_queue_embed(
         ),
         CreateActionRow::Buttons(vec![
             CreateButton::new("edit-queue-size").label("Edit Size"),
-            CreateButton::new("edit-queue-regions").label("Edit Excluded Regions")
+            CreateButton::new("edit-queue-regions").label("Edit Excluded Regions"),
+            CreateButton::new("edit-queue-filter").label("Edit Filters")
         ]),
         CreateActionRow::Buttons(vec![
             CreateButton::new("edit-queue-threshold").label("Edit Threshold"),

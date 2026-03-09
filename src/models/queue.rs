@@ -17,6 +17,7 @@ use crate::{embeds::create_queue_embed, models::user_data::UserData};
 #[derive(Debug, Default)]
 pub struct Filter {
     pub regions: Vec<String>,
+    pub regexes: Vec<Regex>,
 }
 
 impl Filter {
@@ -225,6 +226,7 @@ impl Queue {
             let channel = ChannelId::new(value.get::<i64, &str>("channel_id") as u64);
             let fill_threshold = value.get::<Option<i64>, &str>("fill_threshold").and_then(|v| Some(v as u64));
             let time_threshold = value.get::<Option<i64>, &str>("time_threshold").and_then(|v| Some(v as u64));
+            let regexes = value.get::<Vec<String>, &str>("regex_filters").into_iter().filter_map(|v| Regex::new(&v).ok()).collect();
             map.insert(
                 channel,
                 Queue {
@@ -233,6 +235,7 @@ impl Queue {
                     region: value.get::<String, &str>("region"),
                     filter: Filter { 
                         regions: value.get::<Vec<String>, &str>("excluded_regions"),
+                        regexes
                     },
                     size: value.get::<i64, &str>("size") as usize,
                     thresholds: fill_threshold.zip(time_threshold),
@@ -255,8 +258,8 @@ impl Queue {
     ) {
         let result = sqlx::query(
            "INSERT INTO queues (channel_id, message_id, region, size, excluded_regions, 
-                fill_threshold, time_threshold, ping_channel, ping_role)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) ON CONFLICT (channel_id) DO UPDATE
+                fill_threshold, time_threshold, ping_channel, ping_role, regex_filters)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) ON CONFLICT (channel_id) DO UPDATE
                 SET message_id = EXCLUDED.message_id,
                 region = EXCLUDED.region,
                 size = EXCLUDED.size,
@@ -264,7 +267,8 @@ impl Queue {
                 fill_threshold = EXCLUDED.fill_threshold,
                 time_threshold = EXCLUDED.time_threshold,
                 ping_channel = EXCLUDED.ping_channel,
-                ping_role = EXCLUDED.ping_role"
+                ping_role = EXCLUDED.ping_role
+                regex_filters = EXCLUDED.regex_filters"
             ).bind(self.channel.get() as i64)
             .bind(self.message.get() as i64)
             .bind(&self.region)
@@ -274,6 +278,7 @@ impl Queue {
             .bind(self.thresholds.and_then(|v| Some(v.1 as i64)))
             .bind(self.ping_channel.and_then(|v| Some(v.get() as i64)))
             .bind(self.ping_role.and_then(|v| Some(v.get() as i64)))
+            .bind(self.filter.regexes.iter().map(|v| v.as_str()).collect::<Vec<_>>())
             .execute(pool).await;
 
         if result.is_err() {
@@ -314,6 +319,12 @@ impl Queue {
         if NUMBER_RE.is_match(nation)
         || ROMAN_RE.is_match(nation) {
             return None;
+        }
+
+        for filter in &self.filter.regexes {
+            if filter.is_match(nation) {
+                return None;
+            }
         }
 
         if self.add(

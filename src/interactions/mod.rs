@@ -42,6 +42,7 @@ pub async fn handle_component_interaction(
         "edit-queue-size" => form::spawn_queue_size_form(ctx, data, component).await,
         "edit-queue-regions" => form::spawn_queue_regions_form(ctx, data, component).await,
         "edit-queue-threshold" => form::spawn_queue_threshold_form(ctx, data, component).await,
+        "edit-queue-filter" => form::spawn_queue_filter_form(ctx, data, component).await,
         "delete-queue-threshold" => click::handle_delete_queue_threshold(ctx, data, component).await,
         "clear-queue-role-channel" => click::handle_clear_queue_role_and_channel(ctx, data, component).await,
         // Queue editing dropdowns
@@ -59,6 +60,7 @@ pub async fn handle_modal_interaction(
             "queue-size-modal" => form::process_queue_size_form(ctx, data, modal, key).await,
             "queue-regions-modal" => form::process_queue_regions_form(ctx, data, modal, key).await,
             "queue-threshold-modal" => form::process_queue_threshold_form(ctx, data, modal, key).await,
+            "queue-filter-modal" => form::process_queue_filter_form(ctx, data, modal, key).await,
             _ => Ok(()),
         }
     } else {

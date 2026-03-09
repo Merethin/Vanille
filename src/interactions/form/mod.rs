@@ -7,6 +7,6 @@ pub use statistics::{spawn_stat_time_form, process_stat_leaders_custom_form, pro
 pub use session::{spawn_session_form, process_session_form};
 pub use setup::{spawn_setup_form, process_setup_form};
 pub use queue::{
-    spawn_queue_size_form, spawn_queue_regions_form, spawn_queue_threshold_form,
-    process_queue_size_form, process_queue_regions_form, process_queue_threshold_form
+    spawn_queue_size_form, spawn_queue_regions_form, spawn_queue_threshold_form, spawn_queue_filter_form,
+    process_queue_size_form, process_queue_regions_form, process_queue_threshold_form, process_queue_filter_form
 };
