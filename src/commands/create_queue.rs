@@ -39,7 +39,7 @@ pub async fn create_queue(
         size
     );
 
-    let (embed, components) = create_queue_embed(&queue);
+    let (embed, components) = create_queue_embed(&queue, vec![]);
 
     message.edit(ctx.http(), EditMessage::new().embed(embed).components(components)).await?;
 

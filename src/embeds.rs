@@ -1,20 +1,32 @@
 use itertools::Itertools;
 use regex::Regex;
-use serenity::all::{ButtonStyle, ChannelId, ChannelType, CreateActionRow, CreateButton, CreateEmbed, CreateSelectMenu, CreateSelectMenuKind, FormattedTimestamp, FormattedTimestampStyle, Mentionable, RoleId};
+use serenity::all::{ButtonStyle, ChannelId, ChannelType, CreateActionRow, CreateButton, CreateEmbed, CreateSelectMenu, CreateSelectMenuKind, FormattedTimestamp, FormattedTimestampStyle, Mentionable, RoleId, UserId};
 
 use caramel::ns::{UserAgent, format::prettify_name};
 
-use crate::models::{queue::{Nation, Queue}, session::RecruitDelay};
+use crate::models::{queue::{Nation, Queue}, session::{RecruitDelay}};
 
 pub fn create_queue_embed(
-    queue: &Queue
+    queue: &Queue,
+    sessions: Vec<UserId>,
 ) -> (CreateEmbed, Vec<CreateActionRow>) {
     let embed = CreateEmbed::new().title(
         format!("{} Recruitment Center", prettify_name(&queue.region))
     ).fields(vec![
         ("Nations in Queue", format!("`{}`", &queue.amount_in_queue().to_string()), false),
         ("Last Nation Added", FormattedTimestamp::new(queue.last_updated(), Some(FormattedTimestampStyle::RelativeTime)).to_string(), false),
-        ("Last Telegram Sent", FormattedTimestamp::new(queue.last_telegram_sent(), Some(FormattedTimestampStyle::RelativeTime)).to_string(), false),
+        ("Last Telegram Sent", match queue.last_telegram_sent() {
+            Some((time, user)) => {
+                let t = FormattedTimestamp::new(time, Some(FormattedTimestampStyle::RelativeTime)).to_string();
+                format!("{} by {}", t, user.mention())
+            },
+            None => "None".to_string()
+        }, false),
+        ("Sessions Active", if sessions.is_empty() { 
+            "None".to_string() 
+        } else { 
+            sessions.into_iter().map(|v| v.mention()).join(" ") 
+        }, false)
     ]);
 
     let components = vec![

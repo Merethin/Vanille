@@ -54,7 +54,7 @@ async fn update_all_queues(ctx: &Context, data: &Data) {
         let queues = data.inner.queues.lock().await;
 
         queues.values().map(|queue| {
-            queue.generate_queue_update()
+            queue.generate_queue_update(vec![])
         }).collect::<Vec<_>>()
     };
 

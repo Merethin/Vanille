@@ -6,8 +6,7 @@ use lazy_static::lazy_static;
 use regex::Regex;
 
 use serenity::all::{
-    CacheHttp, ChannelId, Context, EditMessage, Mentionable, 
-    MessageId, RoleId, Timestamp, CreateEmbed, CreateActionRow
+    CacheHttp, ChannelId, Context, CreateActionRow, CreateEmbed, EditMessage, Mentionable, MessageId, RoleId, Timestamp, UserId
 };
 
 use sqlx::{prelude::FromRow, Row};
@@ -83,7 +82,7 @@ pub struct Queue {
     #[sqlx(skip)]
     last_update: Timestamp,
     #[sqlx(skip)]
-    last_telegram: Timestamp,
+    last_telegram: Option<(Timestamp, UserId)>,
     #[sqlx(skip)]
     last_reminder: Timestamp,
 }
@@ -112,7 +111,7 @@ impl Queue {
             ping_role: None,
             queue: QueueImpl::default(),
             last_update: Timestamp::now(),
-            last_telegram: Timestamp::now(),
+            last_telegram: None,
             last_reminder: Timestamp::now(),
         }
     }
@@ -125,7 +124,7 @@ impl Queue {
         self.last_update
     }
 
-    pub fn last_telegram_sent(&self) -> Timestamp {
+    pub fn last_telegram_sent(&self) -> Option<(Timestamp, UserId)> {
         self.last_telegram
     }
 
@@ -148,7 +147,7 @@ impl Queue {
     }
 
     pub fn pull(
-        &mut self, data: &UserData, mut limit: usize
+        &mut self, data: &UserData, mut limit: usize, sessions: Vec<UserId>,
     ) -> (Vec<Nation>, Vec<String>, Option<QueueMessageUpdate>) {
         if self.queue.nations.is_empty() { return (vec![], vec![], None); }
 
@@ -203,9 +202,9 @@ impl Queue {
         }).collect::<Vec<_>>(), eligible_templates.unwrap_or(vec![]));
 
         let update = if !nations.is_empty() {
-            self.last_telegram = Timestamp::now();
+            self.last_telegram = Some((Timestamp::now(), UserId::new(data.user_id)));
 
-            Some(self.generate_queue_update())
+            Some(self.generate_queue_update(sessions))
         } else {
             None
         };
@@ -243,7 +242,7 @@ impl Queue {
                     ping_role: value.get::<Option<i64>, &str>("ping_role").and_then(|v| Some(RoleId::new(v as u64))),
                     queue: QueueImpl::default(),
                     last_update: Timestamp::now(),
-                    last_telegram: Timestamp::now(),
+                    last_telegram: None,
                     last_reminder: Timestamp::now(),
                 }
             );
@@ -300,8 +299,8 @@ impl Queue {
         }
     }
 
-    pub fn generate_queue_update(&self) -> QueueMessageUpdate {
-        let (embed, components) = create_queue_embed(self);
+    pub fn generate_queue_update(&self, sessions: Vec<UserId>) -> QueueMessageUpdate {
+        let (embed, components) = create_queue_embed(self, sessions);
         QueueMessageUpdate { embed, components, channel: self.channel, message: self.message }
     }
 
@@ -310,6 +309,7 @@ impl Queue {
         nation: &str,
         event: &str,
         region: &str,
+        sessions: Vec<UserId>,
     ) -> Option<QueueMessageUpdate> {
         if region == self.region 
         || !self.filter.matches(region) {
@@ -333,7 +333,7 @@ impl Queue {
                 event: event.to_owned(), queue_time: Timestamp::now() 
             }
         ) {
-            Some(self.generate_queue_update())
+            Some(self.generate_queue_update(sessions))
         } else {
             None
         }
@@ -354,7 +354,9 @@ impl Queue {
 
         let now = Timestamp::now();
         let time_since_last_reminder = now.timestamp() - self.last_reminder.timestamp();
-        let time_since_last_telegram = now.timestamp() - self.last_telegram.timestamp();
+        let time_since_last_telegram = now.timestamp() - self.last_telegram.unwrap_or(
+            (Timestamp::now(), UserId::default())
+        ).0.timestamp();
 
         if time_since_last_reminder < REMINDER_COOLDOWN
         || time_since_last_telegram < (time_threshold * 60) as i64

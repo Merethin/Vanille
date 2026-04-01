@@ -36,6 +36,10 @@ pub async fn handle_recruit_oneshot(
         return Ok(());
     }
 
+    let sessions = data.inner.sessions.lock().await.values().filter_map(|s| {
+        if s.queue == component.channel_id { Some(s.user) } else { None }
+    }).collect::<Vec<_>>();
+
     let ((nations, templates, update), channel) = {
         let mut queues = data.inner.queues.lock().await;
         let queue = match queues.get_mut(&component.channel_id) {
@@ -52,7 +56,7 @@ pub async fn handle_recruit_oneshot(
             },
         };
 
-        (queue.pull(&user_data, 8), queue.channel)
+        (queue.pull(&user_data, 8, sessions), queue.channel)
     };
 
     if nations.is_empty() || templates.is_empty() {

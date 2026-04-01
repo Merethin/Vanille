@@ -22,6 +22,10 @@ pub async fn akari_task(ctx: Context, data: Data) {
                 let nation = event.actor.expect(&format!("{} event doesn't have a nation", event.category));
                 let region = event.origin.expect(&format!("{} event doesn't have a region", event.category));
 
+                let sessions = data.inner.sessions.lock().await.values().map(|s| {
+                    (s.queue, s.user)
+                }).collect::<Vec<_>>();
+
                 let queue_updates = {
                     let mut queues = data.inner.queues.lock().await;
 
@@ -30,7 +34,7 @@ pub async fn akari_task(ctx: Context, data: Data) {
                             "nfound" => "newfound",
                             "nrefound" => "refound",
                             _ => unreachable!(),
-                        }, &region)
+                        }, &region, sessions.iter().filter_map(|v| if v.0 == queue.channel { Some(v.1)} else { None }).collect())
                     }).collect::<Vec<_>>()
                 };
 
