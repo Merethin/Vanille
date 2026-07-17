@@ -124,10 +124,15 @@ pub async fn process_session_form(
         &session_type
     );
 
-    data.inner.cooldowns.lock().await.insert(
-        UserId::new(user_data.user_id), 
-        (cooldown, None)
-    );
+    match data.inner.cooldowns.lock().await.entry(UserId::new(user_data.user_id)) {
+        Entry::Occupied(mut o) => {
+            let value = o.get_mut();
+            value.0 = cooldown.max(value.0);
+        },
+        Entry::Vacant(v) => {
+            v.insert((cooldown, None));
+        },
+    }
 
     modal.user.direct_message(
         ctx.http(), CreateMessage::new().embed(embed).components(components)
