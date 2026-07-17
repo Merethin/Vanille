@@ -44,7 +44,7 @@ pub async fn process_stat_leaders_custom_form(
         return Ok(());
     };
 
-    let leaders = ReportEntry::count(
+    let leaders = ReportEntry::count_by_nation(
         &data.inner.pool, modal.channel_id, Some(range)
     ).await?;
 

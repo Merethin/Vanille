@@ -1,3 +1,5 @@
+use std::time::{SystemTime, UNIX_EPOCH};
+
 use log::warn;
 use serde::{Serialize, Deserialize};
 use serenity::all::{ChannelId, Timestamp, UserId};
@@ -68,7 +70,7 @@ impl ReportEntry {
         }
     }
 
-    pub async fn count(
+    pub async fn count_by_nation(
         pool: &sqlx::PgPool,
         queue: ChannelId,
         range: Option<(u64, u64)>
@@ -100,6 +102,51 @@ impl ReportEntry {
                 row.get::<i64, &str>("sender_count") as usize,
             )
         ).collect())
+    }
+
+    pub async fn count_by_user(
+        pool: &sqlx::PgPool,
+        queue: ChannelId,
+        range: Option<(u64, u64)>
+    ) -> Result<Vec<(UserId, usize)>, sqlx::Error> {
+        let rows = if let Some((start, end)) = range {
+            sqlx::query(
+            "SELECT recruiter, COUNT(*) AS rec_count FROM delivery_reports
+                WHERE queue = $1 AND sent_time BETWEEN $2 AND $3
+                GROUP BY recruiter ORDER BY rec_count DESC"
+            )
+            .bind(queue.get() as i64)
+            .bind(start as i64)
+            .bind(end as i64)   
+            .fetch_all(pool)
+            .await?
+        } else {
+            sqlx::query(
+        "SELECT recruiter, COUNT(*) AS rec_count FROM delivery_reports
+            WHERE queue = $1 GROUP BY recruiter ORDER BY rec_count DESC"
+            )
+            .bind(queue.get() as i64)
+            .fetch_all(pool)
+            .await?
+        };
+
+        Ok(rows.iter().map(
+            |row| (
+                UserId::new(row.get::<i64, &str>("recruiter") as u64),
+                row.get::<i64, &str>("rec_count") as usize,
+            )
+        ).collect())
+    }
+
+    pub async fn get_queue_leaders(
+        pool: &sqlx::PgPool,
+        queue: ChannelId,
+    ) -> Result<Vec<(UserId, usize)>, sqlx::Error> {
+        let now = SystemTime::now().duration_since(UNIX_EPOCH).expect("System time before epoch").as_secs();
+
+        Self::count_by_user(
+            pool, queue, Some((now - 86400, now))
+        ).await
     }
 
     pub async fn query(

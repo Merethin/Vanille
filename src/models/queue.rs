@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::{collections::{HashMap, HashSet, VecDeque}};
 use caramel::ns::format::prettify_name;
 use itertools::Itertools;
 use log::warn;
@@ -11,7 +11,7 @@ use serenity::all::{
 
 use sqlx::{prelude::FromRow, Row};
 
-use crate::{embeds::create_queue_embed, models::user_data::UserData};
+use crate::{embeds::create_queue_embed, models::{report::ReportEntry, user_data::UserData}};
 
 #[derive(Debug, Default)]
 pub struct Filter {
@@ -85,6 +85,8 @@ pub struct Queue {
     last_telegram: Option<(Timestamp, UserId)>,
     #[sqlx(skip)]
     last_reminder: Timestamp,
+    #[sqlx(skip)]
+    pub leaders: Vec<(UserId, usize)>
 }
 
 lazy_static! {
@@ -113,6 +115,7 @@ impl Queue {
             last_update: Timestamp::now(),
             last_telegram: None,
             last_reminder: Timestamp::now(),
+            leaders: Vec::new()
         }
     }
 
@@ -146,8 +149,8 @@ impl Queue {
         }
     }
 
-    pub fn pull(
-        &mut self, data: &UserData, mut limit: usize, sessions: Vec<UserId>,
+    pub async fn pull(
+        &mut self, data: &UserData, mut limit: usize, sessions: Vec<UserId>, pool: &sqlx::PgPool
     ) -> (Vec<Nation>, Vec<String>, Option<QueueMessageUpdate>) {
         if self.queue.nations.is_empty() { return (vec![], vec![], None); }
 
@@ -203,8 +206,11 @@ impl Queue {
 
         let update = if !nations.is_empty() {
             self.last_telegram = Some((Timestamp::now(), UserId::new(data.user_id)));
+            if let Ok(leaders) = ReportEntry::get_queue_leaders(pool, self.channel).await {
+                self.leaders = leaders;
+            }
 
-            Some(self.generate_queue_update(sessions))
+            Some(self.generate_queue_update(sessions, &self.leaders))
         } else {
             None
         };
@@ -244,6 +250,7 @@ impl Queue {
                     last_update: Timestamp::now(),
                     last_telegram: None,
                     last_reminder: Timestamp::now(),
+                    leaders: ReportEntry::get_queue_leaders(pool, channel).await?
                 }
             );
         }
@@ -299,8 +306,8 @@ impl Queue {
         }
     }
 
-    pub fn generate_queue_update(&self, sessions: Vec<UserId>) -> QueueMessageUpdate {
-        let (embed, components) = create_queue_embed(self, sessions);
+    pub fn generate_queue_update(&self, sessions: Vec<UserId>, leaders: &Vec<(UserId, usize)>) -> QueueMessageUpdate {
+        let (embed, components) = create_queue_embed(self, sessions, leaders);
         QueueMessageUpdate { embed, components, channel: self.channel, message: self.message }
     }
 
@@ -333,7 +340,7 @@ impl Queue {
                 event: event.to_owned(), queue_time: Timestamp::now() 
             }
         ) {
-            Some(self.generate_queue_update(sessions))
+            Some(self.generate_queue_update(sessions, &self.leaders))
         } else {
             None
         }

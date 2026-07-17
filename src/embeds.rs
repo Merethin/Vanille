@@ -9,6 +9,7 @@ use crate::models::{queue::{Nation, Queue}, session::{RecruitDelay}};
 pub fn create_queue_embed(
     queue: &Queue,
     sessions: Vec<UserId>,
+    leaders: &Vec<(UserId, usize)>
 ) -> (CreateEmbed, Vec<CreateActionRow>) {
     let embed = CreateEmbed::new().title(
         format!("{} Recruitment Center", prettify_name(&queue.region))
@@ -26,6 +27,11 @@ pub fn create_queue_embed(
             "None".to_string() 
         } else { 
             sessions.into_iter().map(|v| v.mention()).join(" ") 
+        }, false),
+        ("Top Recruiters (Last 24h)", if leaders.is_empty() { 
+            "None".to_string() 
+        } else { 
+            leaders.into_iter().take(3).map(|(user, count)| format!("{} - {} telegrams", user.mention(), count)).join("\n")
         }, false)
     ]);
 

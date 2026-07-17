@@ -8,5 +8,5 @@ CREATE TABLE queues (
     time_threshold BIGINT,
     ping_channel BIGINT,
     ping_role BIGINT,
-    regex_filters TEXT[] NOT NULL DEFAULT '{}',
+    regex_filters TEXT[] NOT NULL DEFAULT '{}'
 );

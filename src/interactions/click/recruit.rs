@@ -56,7 +56,7 @@ pub async fn handle_recruit_oneshot(
             },
         };
 
-        (queue.pull(&user_data, 8, sessions), queue.channel)
+        (queue.pull(&user_data, 8, sessions, &data.inner.pool).await, queue.channel)
     };
 
     if nations.is_empty() || templates.is_empty() {
