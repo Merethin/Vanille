@@ -67,7 +67,7 @@ pub async fn cooldown_task(ctx: Context, data: Data) {
                         // Cooldown still in progress
                         None
                     } else {
-                        if (Timestamp::now().timestamp() - session.last_activity_check.timestamp()) > SESSION_PAUSE_DELAY {
+                        if !session.confirm && (Timestamp::now().timestamp() - session.last_activity_check.timestamp()) > SESSION_PAUSE_DELAY {
                             // Time for a session activity check
                             session.pause_time = Some(Timestamp::now());
                             Some((session.clone(), SessionAction::EnactPause))
@@ -91,7 +91,7 @@ pub async fn cooldown_task(ctx: Context, data: Data) {
             result
         };
 
-        for (session, action) in sessions_to_update {
+        for (mut session, action) in sessions_to_update {
             match action {
                 SessionAction::SendTelegram => session.try_send_new_telegram(&ctx, &data).await.unwrap_or_else(|err| {
                     warn!("Error triggering session update: {err}");

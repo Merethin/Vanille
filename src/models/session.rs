@@ -1,7 +1,7 @@
 use std::fmt;
 use log::warn;
 use rand::seq::IndexedRandom;
-use serenity::all::{CacheHttp, CreateMessage, Context, UserId, ChannelId, Timestamp};
+use serenity::all::{CacheHttp, ChannelId, Context, CreateMessage, MessageId, Timestamp, UserId};
 
 use crate::api::calculate_telegram_delay;
 use crate::embeds::create_pause_embed;
@@ -21,6 +21,8 @@ pub struct Session {
     pub delay: RecruitDelay,
     pub last_activity_check: Timestamp,
     pub pause_time: Option<Timestamp>,
+    pub confirm: bool,
+    pub confirm_message: Option<MessageId>
 }
 
 pub const SESSION_TELEGRAM_BUFFER: i64 = 10; // 10 seconds past normal telegram cooldown
@@ -36,7 +38,7 @@ impl fmt::Display for RecruitDelay {
 
 impl Session {
     pub async fn try_send_new_telegram(
-        &self, ctx: &Context, data: &Data
+        &mut self, ctx: &Context, data: &Data
     ) -> Result<(), Error> {
         let user_data = {
             match data.inner.user_data.lock().await.get(&(self.queue, self.user)) {
@@ -101,9 +103,21 @@ impl Session {
             (cooldown, None)
         );
 
-        self.user.direct_message(
+        let message = self.user.direct_message(
             ctx.http(), CreateMessage::new().embed(embed).components(components)
         ).await?;
+
+        if self.confirm {
+            for session in data.inner.sessions.lock().await.values_mut() {
+                if session.queue == self.queue && session.user == self.user {
+                    session.pause_time = Some(Timestamp::now());
+                    session.confirm_message = Some(message.id);
+                    break;
+                }
+            }
+
+            message.react(ctx.http(), '✅').await?;
+        }
 
         if let Some(update) = update {
             update.execute(ctx.clone()).await;

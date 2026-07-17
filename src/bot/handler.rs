@@ -36,6 +36,17 @@ pub async fn event_handler(
                 },
                 _ => Ok(()),
             }
+        },
+        FullEvent::ReactionAdd { add_reaction } => {
+            for session in data.inner.sessions.lock().await.values_mut() {
+                if Some(session.user) == add_reaction.user_id && session.confirm_message == Some(add_reaction.message_id) {
+                    session.pause_time = None;
+                    session.confirm_message = None;
+                    break;
+                }
+            }
+
+            Ok(())
         }
         _ => {
             Ok(())

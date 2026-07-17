@@ -114,7 +114,8 @@ pub fn create_statistics_embed() -> (CreateEmbed, Vec<CreateActionRow>) {
 
 pub fn create_session_start_embed(
     nation: &String,
-    delay: &RecruitDelay
+    delay: &RecruitDelay,
+    session_type: &Option<String>
 ) -> (CreateEmbed, Vec<CreateActionRow>) {
     let embed = CreateEmbed::new().title(
         "Session Started"
@@ -124,6 +125,8 @@ pub fn create_session_start_embed(
         "Started by", nation, true
     ).field(
         "Delay", delay.to_string(), true
+    ).field(
+        "Activity check", if *session_type == Some("confirm".to_string()) { "Reaction" } else { "Periodic" }, true
     );
 
     let components = vec![

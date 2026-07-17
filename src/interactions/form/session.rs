@@ -1,7 +1,6 @@
 use std::collections::hash_map::Entry;
 use serenity::all::{
-    CacheHttp, ComponentInteraction, Context, CreateActionRow, CreateInputText, CreateInteractionResponse, 
-    CreateModal, InputTextStyle, ModalInteraction, ActionRowComponent, CreateMessage, Timestamp, UserId
+    ActionRowComponent, CacheHttp, ComponentInteraction, Context, CreateActionRow, CreateInputText, CreateInteractionResponse, CreateMessage, CreateModal, CreateSelectMenu, CreateSelectMenuKind, CreateSelectMenuOption, InputTextStyle, ModalInteraction, Timestamp, UserId
 };
 
 use crate::api::calculate_telegram_delay;
@@ -18,6 +17,12 @@ pub async fn spawn_session_form(
                 CreateInputText::new(
                     InputTextStyle::Short, "Delay (time between telegrams)", "session-delay"
                 ).placeholder("Leave empty for automatic delay...").required(false)
+            ),
+            CreateActionRow::SelectMenu(
+                CreateSelectMenu::new("session-type", CreateSelectMenuKind::String { options: vec![
+                    CreateSelectMenuOption::new("Periodic activity check", "activity-check").default_selection(true),
+                    CreateSelectMenuOption::new("Confirm after each message", "confirm")
+                ]}).placeholder("Activity check type")
             )]
         )
     )).await?;
@@ -34,12 +39,14 @@ pub async fn process_session_form(
     util::defer_ephemeral(ctx, Modal(modal)).await?;
 
     let mut delay = None;
+    let mut session_type = None;
 
     for row in components {
         for component in &row.components {
             if let ActionRowComponent::InputText(input) = component {
                 match input.custom_id.as_str() {
                     "session-delay" => delay = input.value.clone(),
+                    "session-type" => session_type = input.value.clone(),
                     _ => {}
                 }
             }
@@ -102,6 +109,8 @@ pub async fn process_session_form(
                 delay: delay.clone(),
                 last_activity_check: Timestamp::now(),
                 pause_time: None,
+                confirm: session_type == Some("confirm".into()),
+                confirm_message: None
             });
         },
     }
@@ -112,7 +121,8 @@ pub async fn process_session_form(
 
     let (embed, components) = create_session_start_embed(
         &user_data.nation,
-        &delay
+        &delay,
+        &session_type
     );
 
     data.inner.cooldowns.lock().await.insert(
