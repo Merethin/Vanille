@@ -126,7 +126,7 @@ pub fn create_session_start_embed(
     ).field(
         "Delay", delay.to_string(), true
     ).field(
-        "Activity check", if *session_type == Some("confirm".to_string()) { "Reaction" } else { "Periodic" }, true
+        "Activity check", if session_type.clone().unwrap_or("".into()).len() > 0 { "Reaction" } else { "Periodic" }, true
     );
 
     let components = vec![

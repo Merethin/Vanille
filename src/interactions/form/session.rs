@@ -1,6 +1,6 @@
 use std::collections::hash_map::Entry;
 use serenity::all::{
-    ActionRowComponent, CacheHttp, ComponentInteraction, Context, CreateActionRow, CreateInputText, CreateInteractionResponse, CreateMessage, CreateModal, CreateSelectMenu, CreateSelectMenuKind, CreateSelectMenuOption, InputTextStyle, ModalInteraction, Timestamp, UserId
+    ActionRowComponent, CacheHttp, ComponentInteraction, Context, CreateActionRow, CreateInputText, CreateInteractionResponse, CreateMessage, CreateModal, InputTextStyle, ModalInteraction, Timestamp, UserId
 };
 
 use crate::api::calculate_telegram_delay;
@@ -18,12 +18,11 @@ pub async fn spawn_session_form(
                     InputTextStyle::Short, "Delay (time between telegrams)", "session-delay"
                 ).placeholder("Leave empty for automatic delay...").required(false)
             ),
-            CreateActionRow::SelectMenu(
-                CreateSelectMenu::new("session-type", CreateSelectMenuKind::String { options: vec![
-                    CreateSelectMenuOption::new("Periodic activity check", "activity-check").default_selection(true),
-                    CreateSelectMenuOption::new("Confirm after each message", "confirm")
-                ]}).placeholder("Activity check type")
-            )]
+            CreateActionRow::InputText(
+                CreateInputText::new(
+                    InputTextStyle::Short, "Confirm by using reactions?", "session-type"
+                ).placeholder("Leave empty for periodic activity checks...").required(false)
+            ),]
         )
     )).await?;
 
@@ -109,7 +108,7 @@ pub async fn process_session_form(
                 delay: delay.clone(),
                 last_activity_check: Timestamp::now(),
                 pause_time: None,
-                confirm: session_type == Some("confirm".into()),
+                confirm: session_type.clone().unwrap_or("".into()).len() > 0,
                 confirm_message: None
             });
         },
