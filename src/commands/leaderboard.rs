@@ -1,9 +1,35 @@
 use std::{time::Duration, fmt::Write};
 
+use itertools::Itertools;
 use poise::CreateReply;
-use serenity::all::{ButtonStyle, ChannelId, ComponentInteractionCollector, ComponentInteractionDataKind, CreateActionRow, CreateButton, CreateInteractionResponse, CreateInteractionResponseMessage, CreateSelectMenu, CreateSelectMenuKind, CreateSelectMenuOption, EditMessage, ModalInteractionCollector};
+use serenity::all::{ButtonStyle, ChannelId, ComponentInteractionCollector, ComponentInteractionDataKind, CreateActionRow, CreateAttachment, CreateButton, CreateInteractionResponse, CreateInteractionResponseMessage, CreateSelectMenu, CreateSelectMenuKind, CreateSelectMenuOption, ModalInteractionCollector};
+use thousands::Separable;
 
-use crate::{bot::{Context, Error}, interactions::form::{extract_time_range_from_modal, spawn_stat_time_form}, models::report::ReportEntry};
+use crate::{bot::{Context, Error}, interactions::form::{extract_time_range_from_modal, spawn_stat_time_form}, models::{report::ReportEntry, user_data::UserData}};
+
+fn create_leaderboard_menu(
+    queues: &Vec<(ChannelId, String, String)>,
+    bbcode: bool,
+) -> Vec<CreateActionRow> {
+    vec![
+        CreateActionRow::SelectMenu(
+            CreateSelectMenu::new("leaderboard-queues", CreateSelectMenuKind::String { options: queues.iter().map(
+                |(channel, region, name)| {
+                    CreateSelectMenuOption::new(name, channel.get().to_string()).description(format!("region: {region}"))
+                }
+            ).collect() }).min_values(1).max_values(queues.len() as u8)
+        ),
+        CreateActionRow::Buttons(vec![
+            CreateButton::new("leaderboard-all").label("All Time").style(ButtonStyle::Primary),
+            CreateButton::new("leaderboard-custom").label("Custom Range").style(ButtonStyle::Secondary),
+            CreateButton::new("leaderboard-bbcode").label(
+                if bbcode { "BBCode: On" } else { "BBCode: Off" }
+            ).style(
+                if bbcode { ButtonStyle::Success } else { ButtonStyle::Danger }
+            ),
+        ])
+    ]
+}
 
 #[poise::command(slash_command)]
 pub async fn leaderboard(
@@ -31,17 +57,7 @@ pub async fn leaderboard(
 
     let reply = ctx.send(
         CreateReply::default().content("Select the queues you want to query a leaderboard for:").ephemeral(true).components(
-            vec![CreateActionRow::SelectMenu(
-                CreateSelectMenu::new("leaderboard-queues", CreateSelectMenuKind::String { options: queues.iter().map(
-                    |(channel, region, name)| {
-                        CreateSelectMenuOption::new(name, channel.get().to_string()).description(format!("region: {region}"))
-                    }
-                ).collect() }).min_values(1).max_values(queues.len() as u8)
-            ),
-            CreateActionRow::Buttons(vec![
-                CreateButton::new("leaderboard-all").label("All Time").style(ButtonStyle::Primary),
-                CreateButton::new("leaderboard-custom").label("Custom Range").style(ButtonStyle::Secondary),
-            ])]
+            create_leaderboard_menu(&queues, false)
         ).ephemeral(true)
     ).await?;
 
@@ -50,6 +66,7 @@ pub async fn leaderboard(
     let mut selected_queues: Vec<i64> = vec![];
     let mut range: Option<(u64, u64)> = None;
     let mut selected: bool = false;
+    let mut bbcode: bool = false;
 
     while let Some(interaction) = ComponentInteractionCollector::new(ctx).message_id(message.id).timeout(Duration::from_secs(120)).await {
         match &interaction.data.kind {
@@ -59,6 +76,13 @@ pub async fn leaderboard(
                 continue;
             },
             ComponentInteractionDataKind::Button => {
+                if interaction.data.custom_id == "leaderboard-bbcode" {
+                    bbcode = !bbcode;
+                    interaction.create_response(ctx.http(), CreateInteractionResponse::Acknowledge).await?;
+                    reply.edit(ctx, CreateReply::default().components(create_leaderboard_menu(&queues, bbcode))).await?;
+                    continue;
+                }
+
                 if selected_queues.is_empty() {
                     interaction.create_response(ctx.http(), CreateInteractionResponse::Message(
                         CreateInteractionResponseMessage::new().content("Please select queues!")
@@ -97,7 +121,7 @@ pub async fn leaderboard(
     }
 
     if !selected {
-        reply.edit(ctx, CreateReply::default().content("Select the queues you want to query a leaderboard for:").components(vec![])).await?;
+        reply.edit(ctx, CreateReply::default().components(vec![])).await?;
         return Ok(());
     }
 
@@ -114,28 +138,53 @@ pub async fn leaderboard(
 
     let mut output = String::new();
 
-    for (user, count) in entries {
-        let name = user.to_user(ctx.http()).await?.name;
-        writeln!(output, "{}: {}", name, count)?;
+    if !bbcode {
+        for (user, count) in entries {
+            let name = user.to_user(ctx.http()).await?.name;
+            writeln!(output, "{}: {}", name, count)?;
+        }
+    } else {
+        write!(output, "[table][tr][td][b]Rank[/b][/td][td][b]Recruiter[/b][/td][td][b]Total Telegrams[/b][/td][/tr]")?;
+
+        for (index, (user, count)) in entries.into_iter().enumerate() {
+            let nations = UserData::find_nations(&ctx.data().inner.pool, user, &selected_queues).await?;
+            writeln!(
+                output, 
+                "[tr][td]{}[/td][td]{}[/td][td]{}[/td][/tr]", 
+                index + 1, 
+                nations.iter().map(|n| format!("[nation]{n}[/nation]")).join(" / "), 
+                count.separate_with_commas()
+            )?;
+        }
+
+        write!(output, "[/table]")?;
     }
 
-    write!(output, "\ntotal: {}", total)?;
-    
-    if let Some(range) = range {
-        reply.edit(
-            ctx, CreateReply::default().content(format!(
-                "Leaderboard from <t:{}:f> to <t:{}:f>:\n```\n{}\n```", 
-                range.0, range.1, output
-            )).components(vec![])
-        ).await?;
-    } else {
-        reply.edit(
-            ctx, CreateReply::default().content(format!(
-                "All-time leaderboard:\n```\n{}\n```", 
-                output
-            )).components(vec![])
-        ).await?;
+    let mut attached: Option<String> = None;
+    if output.len() > 1850 {
+        attached = Some(output);
+        output = "Output generated as attachment due to length".into();
     }
+    
+    let mut builder = if let Some(range) = range {
+        CreateReply::default().content(format!(
+            "Leaderboard from <t:{}:f> to <t:{}:f>:\n```\n{}\n```\nTotal: {}", 
+            range.0, range.1, output, total
+        )).components(vec![])
+    } else {
+        CreateReply::default().content(format!(
+            "All-time leaderboard:\n```\n{}\n```\nTotal: {}", 
+            output, total
+        )).components(vec![])
+    };
+
+    if let Some(content) = attached {
+        builder = builder.attachment(
+            CreateAttachment::bytes(content, "leaderboard.txt")
+        )
+    }
+
+    reply.edit(ctx, builder).await?;
 
     Ok(())
 }

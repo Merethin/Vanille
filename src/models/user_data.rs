@@ -84,4 +84,18 @@ impl UserData {
 
         Ok(map)
     }
+
+    pub async fn find_nations(
+        pool: &sqlx::PgPool,
+        user: UserId,
+        queues: &[i64],
+    ) -> Result<Vec<String>, sqlx::Error> {
+        let vec: Vec<String> = sqlx::query_scalar(
+            "SELECT nation FROM user_data WHERE user_id = $1 AND queue = ANY($2)"
+        ).bind(user.get() as i64)
+        .bind(queues)
+        .fetch_all(pool).await?;
+
+        Ok(vec)
+    }
 }
