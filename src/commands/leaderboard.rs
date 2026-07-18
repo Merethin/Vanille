@@ -2,7 +2,7 @@ use std::{time::Duration, fmt::Write};
 
 use itertools::Itertools;
 use poise::CreateReply;
-use serenity::all::{ButtonStyle, ChannelId, ComponentInteractionCollector, ComponentInteractionDataKind, CreateActionRow, CreateAttachment, CreateButton, CreateInteractionResponse, CreateInteractionResponseMessage, CreateSelectMenu, CreateSelectMenuKind, CreateSelectMenuOption, ModalInteractionCollector};
+use serenity::all::{ButtonStyle, ChannelId, ComponentInteractionCollector, ComponentInteractionDataKind, CreateActionRow, CreateAttachment, CreateButton, CreateInteractionResponse, CreateInteractionResponseMessage, CreateMessage, CreateSelectMenu, CreateSelectMenuKind, CreateSelectMenuOption, ModalInteractionCollector};
 use thousands::Separable;
 
 use crate::{bot::{Context, Error}, interactions::form::{extract_time_range_from_modal, spawn_stat_time_form}, models::{report::ReportEntry, user_data::UserData}};
@@ -163,10 +163,10 @@ pub async fn leaderboard(
     let mut attached: Option<String> = None;
     if output.len() > 1850 {
         attached = Some(output);
-        output = "Output generated as attachment due to length".into();
+        output = "Output generated as attachment due to length - check your DMs".into();
     }
     
-    let mut builder = if let Some(range) = range {
+    let builder = if let Some(range) = range {
         CreateReply::default().content(format!(
             "Leaderboard from <t:{}:f> to <t:{}:f>:\n```\n{}\n```\nTotal: {}", 
             range.0, range.1, output, total
@@ -178,13 +178,16 @@ pub async fn leaderboard(
         )).components(vec![])
     };
 
-    if let Some(content) = attached {
-        builder = builder.attachment(
-            CreateAttachment::bytes(content, "leaderboard.txt")
-        )
-    }
-
     reply.edit(ctx, builder).await?;
+
+    if let Some(content) = attached {
+        ctx.author().direct_message(
+            ctx.http(), 
+            CreateMessage::new().content("Generated leaderboard:").add_file(
+                CreateAttachment::bytes(content, "leaderboard.txt")
+            )
+        ).await?;
+    }
 
     Ok(())
 }
