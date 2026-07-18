@@ -45,16 +45,18 @@ pub async fn leaderboard(
         ).ephemeral(true)
     ).await?;
 
-    let mut message = reply.into_message().await?;
+    let message = reply.message().await?;
 
     let mut selected_queues: Vec<i64> = vec![];
     let mut range: Option<(u64, u64)> = None;
     let mut selected: bool = false;
 
     while let Some(interaction) = ComponentInteractionCollector::new(ctx).message_id(message.id).timeout(Duration::from_secs(120)).await {
-        match interaction.data.kind {
+        match &interaction.data.kind {
             ComponentInteractionDataKind::StringSelect { values } => {
                 selected_queues = values.iter().filter_map(|v| v.parse().ok()).collect();
+                interaction.create_response(ctx.http(), CreateInteractionResponse::Acknowledge).await?;
+                continue;
             },
             ComponentInteractionDataKind::Button => {
                 if selected_queues.is_empty() {
@@ -75,9 +77,7 @@ pub async fn leaderboard(
                     "leaderboard-custom" => {
                         spawn_stat_time_form(ctx.serenity_context(), ctx.data(), &interaction, "leaderboard-custom-report").await?;
 
-                        if let Some(modal) = ModalInteractionCollector::new(ctx).custom_ids(
-                            vec!["leaderboard-custom-report".into()]
-                        ).timeout(Duration::from_secs(60)).await {
+                        if let Some(modal) = ModalInteractionCollector::new(ctx).message_id(message.id).timeout(Duration::from_secs(60)).await {
                             range = extract_time_range_from_modal(ctx.serenity_context(), &modal).await?;
                             
                             if range.is_none() {
@@ -97,7 +97,7 @@ pub async fn leaderboard(
     }
 
     if !selected {
-        message.edit(ctx.http(), EditMessage::new().components(vec![])).await?;
+        reply.edit(ctx, CreateReply::default().content("Select the queues you want to query a leaderboard for:").components(vec![])).await?;
         return Ok(());
     }
 
@@ -105,9 +105,8 @@ pub async fn leaderboard(
     let total: usize = entries.iter().map(|v| v.1).sum();
 
     if entries.is_empty() {
-        message.edit(
-            ctx.http(),
-            EditMessage::new().content("Error: no results recorded!").components(vec![])
+        reply.edit(
+            ctx, CreateReply::default().content("Error: no results recorded!").components(vec![])
         ).await?;
 
         return Ok(());
@@ -123,17 +122,15 @@ pub async fn leaderboard(
     write!(output, "\ntotal: {}", total)?;
     
     if let Some(range) = range {
-        message.edit(
-            ctx.http(),
-            EditMessage::new().content(format!(
+        reply.edit(
+            ctx, CreateReply::default().content(format!(
                 "Leaderboard from <t:{}:f> to <t:{}:f>:\n```\n{}\n```", 
                 range.0, range.1, output
             )).components(vec![])
         ).await?;
     } else {
-        message.edit(
-            ctx.http(),
-            EditMessage::new().content(format!(
+        reply.edit(
+            ctx, CreateReply::default().content(format!(
                 "All-time leaderboard:\n```\n{}\n```", 
                 output
             )).components(vec![])
