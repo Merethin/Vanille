@@ -34,7 +34,7 @@ pub async fn handle_stat_leaders_all(
     util::defer_ephemeral(ctx, Component(component)).await?;
 
     let leaders = ReportEntry::count_by_nation(
-        &data.inner.pool, component.channel_id, None
+        &data.inner.pool, &[component.channel_id.get() as i64], None
     ).await?;
 
     if leaders.is_empty() {

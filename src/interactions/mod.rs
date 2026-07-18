@@ -1,5 +1,5 @@
 mod click;
-mod form;
+pub mod form;
 mod dropdown;
 
 use serenity::all::{Context, ComponentInteraction, ModalInteraction, Member};

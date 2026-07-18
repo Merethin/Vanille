@@ -206,7 +206,7 @@ impl Queue {
 
         let update = if !nations.is_empty() {
             self.last_telegram = Some((Timestamp::now(), UserId::new(data.user_id)));
-            if let Ok(leaders) = ReportEntry::get_queue_leaders(pool, self.channel).await {
+            if let Ok(leaders) = ReportEntry::get_queue_leaders(pool, &[self.channel.get() as i64]).await {
                 self.leaders = leaders;
             }
 
@@ -250,7 +250,7 @@ impl Queue {
                     last_update: Timestamp::now(),
                     last_telegram: None,
                     last_reminder: Timestamp::now(),
-                    leaders: ReportEntry::get_queue_leaders(pool, channel).await?
+                    leaders: ReportEntry::get_queue_leaders(pool, &[channel.get() as i64]).await?
                 }
             );
         }

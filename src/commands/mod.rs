@@ -1,19 +1,22 @@
 mod create_queue;
 mod edit_queue;
 mod delete_queue;
+mod leaderboard;
 
 use poise::{CreateReply, Command};
-use crate::bot::{Context, Error, Data};
+use crate::bot::{Context, Data, Error};
 
 use create_queue::create_queue;
 use edit_queue::edit_queue;
 use delete_queue::delete_queue;
+use leaderboard::leaderboard;
 
 pub fn create_command_list() -> Vec<Command<Data, Error>> {
     vec![
         create_queue(),
         edit_queue(),
-        delete_queue()
+        delete_queue(),
+        leaderboard()
     ]
 }
 

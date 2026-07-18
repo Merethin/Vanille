@@ -72,16 +72,16 @@ impl ReportEntry {
 
     pub async fn count_by_nation(
         pool: &sqlx::PgPool,
-        queue: ChannelId,
+        queues: &[i64],
         range: Option<(u64, u64)>
     ) -> Result<Vec<(String, usize)>, sqlx::Error> {
         let rows = if let Some((start, end)) = range {
             sqlx::query(
             "SELECT sender, COUNT(*) AS sender_count FROM delivery_reports
-                WHERE queue = $1 AND sent_time BETWEEN $2 AND $3
+                WHERE queue = ANY($1) AND sent_time BETWEEN $2 AND $3
                 GROUP BY sender ORDER BY sender_count DESC"
             )
-            .bind(queue.get() as i64)
+            .bind(queues)
             .bind(start as i64)
             .bind(end as i64)   
             .fetch_all(pool)
@@ -89,9 +89,9 @@ impl ReportEntry {
         } else {
             sqlx::query(
         "SELECT sender, COUNT(*) AS sender_count FROM delivery_reports
-            WHERE queue = $1 GROUP BY sender ORDER BY sender_count DESC"
+            WHERE queue = ANY($1) GROUP BY sender ORDER BY sender_count DESC"
             )
-            .bind(queue.get() as i64)
+            .bind(queues)
             .fetch_all(pool)
             .await?
         };
@@ -106,16 +106,16 @@ impl ReportEntry {
 
     pub async fn count_by_user(
         pool: &sqlx::PgPool,
-        queue: ChannelId,
+        queues: &[i64],
         range: Option<(u64, u64)>
     ) -> Result<Vec<(UserId, usize)>, sqlx::Error> {
         let rows = if let Some((start, end)) = range {
             sqlx::query(
             "SELECT recruiter, COUNT(*) AS rec_count FROM delivery_reports
-                WHERE queue = $1 AND sent_time BETWEEN $2 AND $3
+                WHERE queue = ANY($1) AND sent_time BETWEEN $2 AND $3
                 GROUP BY recruiter ORDER BY rec_count DESC"
             )
-            .bind(queue.get() as i64)
+            .bind(queues)
             .bind(start as i64)
             .bind(end as i64)   
             .fetch_all(pool)
@@ -123,9 +123,9 @@ impl ReportEntry {
         } else {
             sqlx::query(
         "SELECT recruiter, COUNT(*) AS rec_count FROM delivery_reports
-            WHERE queue = $1 GROUP BY recruiter ORDER BY rec_count DESC"
+            WHERE queue = ANY($1) GROUP BY recruiter ORDER BY rec_count DESC"
             )
-            .bind(queue.get() as i64)
+            .bind(queues)
             .fetch_all(pool)
             .await?
         };
@@ -140,12 +140,12 @@ impl ReportEntry {
 
     pub async fn get_queue_leaders(
         pool: &sqlx::PgPool,
-        queue: ChannelId,
+        queues: &[i64],
     ) -> Result<Vec<(UserId, usize)>, sqlx::Error> {
         let now = SystemTime::now().duration_since(UNIX_EPOCH).expect("System time before epoch").as_secs();
 
         Self::count_by_user(
-            pool, queue, Some((now - 86400, now))
+            pool, queues, Some((now - 86400, now))
         ).await
     }
 

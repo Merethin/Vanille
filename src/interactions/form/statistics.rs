@@ -45,7 +45,7 @@ pub async fn process_stat_leaders_custom_form(
     };
 
     let leaders = ReportEntry::count_by_nation(
-        &data.inner.pool, modal.channel_id, Some(range)
+        &data.inner.pool, &[modal.channel_id.get() as i64], Some(range)
     ).await?;
 
     if leaders.is_empty() {
@@ -119,7 +119,7 @@ ctx.http(), EditInteractionResponse::new().content(format!(
     Ok(())
 }
 
-async fn extract_time_range_from_modal(
+pub async fn extract_time_range_from_modal(
     ctx: &Context, modal: &ModalInteraction
 ) -> Result<Option<(u64, u64)>, Error> {
     let components = &modal.data.components;
