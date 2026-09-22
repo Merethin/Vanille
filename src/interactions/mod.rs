@@ -35,6 +35,8 @@ pub async fn handle_component_interaction(
         "stat-csv-all" => click::handle_stat_csv_all(ctx, data, component).await,
         "stat-leaders-custom" => form::spawn_stat_time_form(ctx, data, component, "stat-leaders-custom-report").await,
         "stat-csv-custom" => form::spawn_stat_time_form(ctx, data, component, "stat-csv-custom-report").await,
+        "stat-templates-top" => click::handle_stat_templates_top(ctx, data, component).await,
+        "stat-template-check" => form::spawn_template_id_form(ctx, data, component).await,
         // Session DM buttons
         "stream-resume" => click::handle_stream_resume(ctx, data, component).await,
         "stream-end" => click::handle_stream_end(ctx, data, component).await,
@@ -69,6 +71,7 @@ pub async fn handle_modal_interaction(
             "stream-start-modal" => form::process_session_form(ctx, data, modal).await,
             "stat-leaders-custom-report" => form::process_stat_leaders_custom_form(ctx, data, modal).await,
             "stat-csv-custom-report" => form::process_stat_csv_custom_form(ctx, data, modal).await,
+            "stat-template-check-report" => form::process_stat_template_check_form(ctx, data, modal).await,
             _ => Ok(())
         }
     }

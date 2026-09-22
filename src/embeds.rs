@@ -4,7 +4,7 @@ use serenity::all::{ButtonStyle, ChannelId, ChannelType, CreateActionRow, Create
 
 use caramel::ns::{UserAgent, format::prettify_name};
 
-use crate::models::{queue::{Nation, Queue}, session::{RecruitDelay}};
+use crate::models::{queue::{Nation, Queue}, report::TemplateStats, session::RecruitDelay};
 
 pub fn create_queue_embed(
     queue: &Queue,
@@ -107,6 +107,10 @@ pub fn create_statistics_embed() -> (CreateEmbed, Vec<CreateActionRow>) {
             CreateButton::new("stat-leaders-custom").label("Leaderboard (Custom)").style(ButtonStyle::Danger),
             CreateButton::new("stat-csv-custom").label("CSV (Custom)").style(ButtonStyle::Success),
         ]),
+        CreateActionRow::Buttons(vec![
+            CreateButton::new("stat-templates-top").label("Top Templates").style(ButtonStyle::Danger),
+            CreateButton::new("stat-template-check").label("Check Template").style(ButtonStyle::Success),
+        ]),
     ];
 
     (embed, components)
@@ -195,4 +199,68 @@ pub fn create_edit_queue_embed(
             CreateButton::new("clear-queue-role-channel").label("Clear Role and Channel").style(ButtonStyle::Danger)
         ]),
     ])
+}
+
+pub fn create_template_embed(
+    stats: &TemplateStats
+) -> CreateEmbed {
+    let overall_ratio = 100f64 * (stats.total_recruited as f64) / (stats.total_sent as f64) ;
+    let newfound_ratio = 100f64 * (stats.recruited_newfounds as f64) / (stats.sent_newfounds as f64);
+    let refound_ratio = 100f64 * (stats.recruited_refounds as f64) / (stats.sent_refounds as f64);
+
+    CreateEmbed::new().title(
+        format!("Template Statistics: {}", stats.template)
+    ).field(
+        "Created By", format!("`{}`", stats.sender), false
+    ).field(
+        "Total Telegrams", format!(
+            "{} sent / {} recruited ({:.2}%)",
+            stats.total_sent, stats.total_recruited, overall_ratio
+        ), false
+    ).field(
+        "Telegrams to Newfounds", format!(
+            "{} sent / {} recruited ({:.2}%)",
+            stats.sent_newfounds, stats.recruited_newfounds, newfound_ratio
+        ), false
+    ).field(
+        "Telegrams to Refounds", format!(
+            "{} sent / {} recruited ({:.2}%)",
+            stats.sent_refounds, stats.recruited_refounds, refound_ratio
+        ), false
+    )
+}
+
+const MIN_SAMPLE_SIZE: i64 = 1000; // Minimum sample size for a template to be considered
+const TEMPLATE_COUNT: usize = 10; // Show only this number of templates
+
+pub fn create_top_templates_embed(
+    stats: &Vec<TemplateStats>
+) -> CreateEmbed {
+    // Sort by highest newfound ratio, hence inverse sort order and index 3
+    let mut templates: Vec<_> = stats.iter().filter(
+        |v| v.total_sent >= MIN_SAMPLE_SIZE
+    ).map(|stats| {
+        let overall_ratio = 100f64 * (stats.total_recruited as f64) / (stats.total_sent as f64) ;
+        let newfound_ratio = 100f64 * (stats.recruited_newfounds as f64) / (stats.sent_newfounds as f64);
+        let refound_ratio = 100f64 * (stats.recruited_refounds as f64) / (stats.sent_refounds as f64);
+
+        (stats.template.clone(), stats.sender.clone(), overall_ratio, newfound_ratio, refound_ratio)
+    }).sorted_by(|a, b| b.3.partial_cmp(&a.3).unwrap()).collect();
+
+    templates.truncate(TEMPLATE_COUNT);
+
+    CreateEmbed::new().title(
+        "Best Performing Templates"
+    ).description(
+        if templates.is_empty() {
+            format!("No templates match the sample size (at least {} telegrams sent)", MIN_SAMPLE_SIZE)
+        } else {
+            templates.into_iter().map(|v| {
+                format!(
+                    "`{}` by `{}`: {:.2}% total, {:.2}% newfounds, {:.2}% refounds",
+                    v.0, v.1, v.2, v.3, v.4
+                )
+            }).join("\n")
+        }
+    )
 }

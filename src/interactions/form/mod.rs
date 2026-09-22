@@ -3,7 +3,12 @@ mod session;
 mod setup;
 mod queue;
 
-pub use statistics::{spawn_stat_time_form, process_stat_leaders_custom_form, process_stat_csv_custom_form, extract_time_range_from_modal};
+pub use statistics::{
+    spawn_stat_time_form, spawn_template_id_form,
+    process_stat_leaders_custom_form, process_stat_csv_custom_form, 
+    extract_time_range_from_modal,
+    process_stat_template_check_form
+};
 pub use session::{spawn_session_form, process_session_form};
 pub use setup::{spawn_setup_form, process_setup_form};
 pub use queue::{

@@ -4,7 +4,7 @@ use serenity::all::{
     CreateInteractionResponseMessage, EditInteractionResponse
 };
 
-use crate::bot::{Data, Error, util::{self, Component}};
+use crate::{bot::{Data, Error, util::{self, Component}}, embeds::create_top_templates_embed};
 use crate::embeds::create_statistics_embed;
 use crate::models::report::ReportEntry;
 
@@ -93,6 +93,37 @@ ctx.http(), EditInteractionResponse::new().content(
                 "All-time telegram data:"
             ).new_attachment(
                 CreateAttachment::bytes(output, "vanille-report.csv")
+            )
+        ).await?;
+    }
+
+    Ok(())
+}
+
+pub async fn handle_stat_templates_top(
+    ctx: &Context, data: &Data, component: &ComponentInteraction
+) -> Result<(), Error> {
+    if !data.inner.queues.lock().await.contains_key(&component.channel_id) {
+        util::direct_reply(
+            ctx, Component(component),
+            "Invalid interaction: no queue linked to channel", true
+        ).await?;
+
+        return Ok(());
+    }
+
+    util::defer_ephemeral(ctx, Component(component)).await?;
+
+    let entries = ReportEntry::query_template_stats(
+        &data.inner.pool, component.channel_id, None
+    ).await?;
+
+    if entries.is_empty() {
+        util::edit_reply(ctx, Component(component), "Error: no templates found!").await?;
+    } else {
+        component.edit_response(
+ctx.http(), EditInteractionResponse::new().embed(
+                create_top_templates_embed(&entries)
             )
         ).await?;
     }

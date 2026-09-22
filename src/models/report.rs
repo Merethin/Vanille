@@ -1,4 +1,4 @@
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::{collections::HashMap, time::{SystemTime, UNIX_EPOCH}};
 
 use log::warn;
 use serde::{Serialize, Deserialize};
@@ -21,6 +21,27 @@ pub struct ReportEntry {
     pub sent_time: i64,
     pub moved: bool,
     pub moved_time: Option<i64>,
+}
+
+#[derive(Debug, Serialize, Deserialize, FromRow)]
+pub struct TemplateStatsRow {
+    pub sender: String,
+    pub template: String,
+    pub event: String,
+    pub total_sent: i64,
+    pub total_recruited: i64,
+}
+
+#[derive(Debug, Default)]
+pub struct TemplateStats {
+    pub sender: String,
+    pub template: String,
+    pub total_sent: i64,
+    pub total_recruited: i64,
+    pub sent_newfounds: i64,
+    pub recruited_newfounds: i64,
+    pub sent_refounds: i64,
+    pub recruited_refounds: i64,
 }
 
 impl ReportEntry {
@@ -196,5 +217,55 @@ impl ReportEntry {
         if result.is_err() {
             warn!("Failed to mark move for nation '{}', queue {} in Postgres database - {:?}", nation, queue.get(), result);
         }
+    }
+
+    async fn query_template_stat_rows(
+        pool: &sqlx::PgPool,
+        queue: ChannelId,
+        template: Option<String>
+    ) -> Result<Vec<TemplateStatsRow>, sqlx::Error> {
+        if let Some(template) = template {
+            sqlx::query_as(
+                "SELECT sender, template, event, COUNT(*) as total_sent, COUNT(moved_time) as total_recruited 
+                FROM delivery_reports WHERE queue = $1 AND template = $2 GROUP BY sender, template, event"
+            ).bind(queue.get() as i64)
+            .bind(template)
+            .fetch_all(pool).await
+        } else {
+            sqlx::query_as(
+            "SELECT sender, template, event, COUNT(*) as total_sent, COUNT(moved_time) as total_recruited 
+                FROM delivery_reports WHERE queue = $1 GROUP BY sender, template, event"
+            ).bind(queue.get() as i64).fetch_all(pool).await
+        }
+    }
+
+    pub async fn query_template_stats(
+        pool: &sqlx::PgPool,
+        queue: ChannelId,
+        template: Option<String>
+    ) -> Result<Vec<TemplateStats>, sqlx::Error> {
+        let rows = Self::query_template_stat_rows(pool, queue, template).await?;
+
+        let mut map: HashMap<(String, String), TemplateStats> = HashMap::new();
+
+        for item in rows {
+            let key = (item.sender.clone(), item.template.clone());
+            let stats = map.entry(key).or_default();
+
+            stats.sender = item.sender;
+            stats.template = item.template;
+            stats.total_sent += item.total_sent;
+            stats.total_recruited += item.total_recruited;
+            
+            if item.event == "newfound" {
+                stats.sent_newfounds = item.total_sent;
+                stats.recruited_newfounds = item.total_recruited;
+            } else if item.event == "refound" {
+                stats.sent_refounds = item.total_sent;
+                stats.recruited_refounds = item.total_recruited;
+            }
+        }
+
+        Ok(map.into_values().collect())
     }
 }

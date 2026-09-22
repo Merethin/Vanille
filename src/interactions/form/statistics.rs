@@ -3,7 +3,7 @@ use serenity::all::{
     ActionRowComponent, CacheHttp, ComponentInteraction, Context, CreateActionRow, CreateAttachment, CreateInputText, CreateInteractionResponse, CreateModal, EditInteractionResponse, InputTextStyle, ModalInteraction
 };
 
-use crate::bot::{Data, Error, util::{self, Modal}};
+use crate::{bot::{Data, Error, util::{self, Modal}}, embeds::create_template_embed};
 use crate::models::report::ReportEntry;
 
 pub async fn spawn_stat_time_form(
@@ -19,6 +19,22 @@ pub async fn spawn_stat_time_form(
                 CreateInputText::new(
                     InputTextStyle::Short, "End of Report", "report-end"
                 ).placeholder("Time is in UTC, defaults to the current time")
+            )]
+        )
+    )).await?;
+
+    Ok(())
+}
+
+pub async fn spawn_template_id_form(
+    ctx: &Context, _: &Data, component: &ComponentInteraction
+) -> Result<(), Error> {
+    component.create_response(ctx.http(), CreateInteractionResponse::Modal(
+        CreateModal::new("stat-template-check-report", "Select Template").components(
+            vec![CreateActionRow::InputText(
+                CreateInputText::new(
+                    InputTextStyle::Short, "Template ID", "template-id"
+                ).placeholder("Enter template ID to analyze")
             )]
         )
     )).await?;
@@ -159,4 +175,54 @@ pub async fn extract_time_range_from_modal(
     }
 
     Ok(Some((start.timestamp() as u64, end.timestamp() as u64)))
+}
+
+pub async fn process_stat_template_check_form(
+    ctx: &Context, data: &Data, modal: &ModalInteraction
+) -> Result<(), Error> {
+    if !data.inner.queues.lock().await.contains_key(&modal.channel_id) {
+        util::direct_reply(
+            ctx, Modal(modal),
+            "Invalid interaction: no queue linked to channel", true
+        ).await?;
+
+        return Ok(());
+    }
+
+    modal.defer_ephemeral(ctx.http()).await?;
+
+    let components = &modal.data.components;
+
+    let mut template = None;
+
+    for row in components {
+        for component in &row.components {
+            if let ActionRowComponent::InputText(input) = component {
+                match input.custom_id.as_str() {
+                    "template-id" => template = input.value.clone(),
+                    _ => {}
+                }
+            }
+        }
+    }
+
+    let Some(template) = template else {
+        return Ok(());
+    };
+
+    let entries = ReportEntry::query_template_stats(
+        &data.inner.pool, modal.channel_id, Some(template)
+    ).await?;
+
+    if entries.is_empty() {
+        util::edit_reply(ctx, Modal(modal), "Error: could not find a template matching that ID!").await?;
+    } else {
+        modal.edit_response(
+            ctx.http(), EditInteractionResponse::new().embed(
+                create_template_embed(&entries[0])
+            )
+        ).await?;
+    }
+
+    Ok(())
 }
