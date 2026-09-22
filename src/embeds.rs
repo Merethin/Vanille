@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 use itertools::Itertools;
 use regex::Regex;
 use serenity::all::{ButtonStyle, ChannelId, ChannelType, CreateActionRow, CreateButton, CreateEmbed, CreateSelectMenu, CreateSelectMenuKind, FormattedTimestamp, FormattedTimestampStyle, Mentionable, RoleId, UserId};
@@ -201,12 +203,24 @@ pub fn create_edit_queue_embed(
     ])
 }
 
+// Quotient * 100 but with some safeguards
+fn calculate_percentage(value: f64, total: f64) -> f64 {
+    if total == 0f64 { return 0f64; }
+
+    let result = value / total;
+    if !result.is_normal() {
+        return 0f64;
+    }
+
+    100f64 * result
+}
+
 pub fn create_template_embed(
     stats: &TemplateStats
 ) -> CreateEmbed {
-    let overall_ratio = 100f64 * (stats.total_recruited as f64) / (stats.total_sent as f64) ;
-    let newfound_ratio = 100f64 * (stats.recruited_newfounds as f64) / (stats.sent_newfounds as f64);
-    let refound_ratio = 100f64 * (stats.recruited_refounds as f64) / (stats.sent_refounds as f64);
+    let overall_ratio = calculate_percentage(stats.total_recruited as f64, stats.total_sent as f64);
+    let newfound_ratio = calculate_percentage(stats.recruited_newfounds as f64, stats.sent_newfounds as f64);
+    let refound_ratio = calculate_percentage(stats.recruited_refounds as f64, stats.sent_refounds as f64);
 
     CreateEmbed::new().title(
         format!("Template Statistics: {}", stats.template)
@@ -240,12 +254,12 @@ pub fn create_top_templates_embed(
     let mut templates: Vec<_> = stats.iter().filter(
         |v| v.total_sent >= MIN_SAMPLE_SIZE
     ).map(|stats| {
-        let overall_ratio = 100f64 * (stats.total_recruited as f64) / (stats.total_sent as f64) ;
-        let newfound_ratio = 100f64 * (stats.recruited_newfounds as f64) / (stats.sent_newfounds as f64);
-        let refound_ratio = 100f64 * (stats.recruited_refounds as f64) / (stats.sent_refounds as f64);
+        let overall_ratio = calculate_percentage(stats.total_recruited as f64, stats.total_sent as f64);
+        let newfound_ratio = calculate_percentage(stats.recruited_newfounds as f64, stats.sent_newfounds as f64);
+        let refound_ratio = calculate_percentage(stats.recruited_refounds as f64, stats.sent_refounds as f64);
 
         (stats.template.clone(), stats.sender.clone(), overall_ratio, newfound_ratio, refound_ratio)
-    }).sorted_by(|a, b| b.3.partial_cmp(&a.3).unwrap()).collect();
+    }).sorted_by(|a, b| b.3.partial_cmp(&a.3).unwrap_or(Ordering::Equal)).collect();
 
     templates.truncate(TEMPLATE_COUNT);
 
