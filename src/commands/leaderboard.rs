@@ -5,7 +5,8 @@ use poise::CreateReply;
 use serenity::all::{ButtonStyle, ChannelId, ComponentInteractionCollector, ComponentInteractionDataKind, CreateActionRow, CreateAttachment, CreateButton, CreateInteractionResponse, CreateInteractionResponseMessage, CreateMessage, CreateSelectMenu, CreateSelectMenuKind, CreateSelectMenuOption, ModalInteractionCollector};
 use thousands::Separable;
 
-use crate::{bot::{Context, Error}, interactions::form::{extract_time_range_from_modal, spawn_stat_time_form}, models::{report::ReportEntry, user_data::UserData}};
+use crate::{bot::{Context, Error}, interactions::form::{extract_time_range_from_modal, spawn_stat_time_form}};
+use vanille_models::{report::ReportEntry, user_data::UserData};
 
 fn create_leaderboard_menu(
     queues: &Vec<(ChannelId, String, String)>,

@@ -6,7 +6,7 @@ use serenity::all::{
 
 use crate::{bot::{Data, Error, util::{self, Component}}, embeds::create_top_templates_embed};
 use crate::embeds::create_statistics_embed;
-use crate::models::report::ReportEntry;
+use vanille_models::report::ReportEntry;
 
 pub async fn create_statistics_menu(
     ctx: &Context, _: &Data, component: &ComponentInteraction

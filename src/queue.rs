@@ -11,7 +11,8 @@ use serenity::all::{
 
 use sqlx::{prelude::FromRow, Row};
 
-use crate::{embeds::create_queue_embed, models::{report::ReportEntry, user_data::UserData}};
+use crate::embeds::create_queue_embed;
+use vanille_models::{report::ReportEntry, user_data::UserData};
 
 #[derive(Debug, Default)]
 pub struct Filter {

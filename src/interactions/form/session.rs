@@ -5,7 +5,7 @@ use serenity::all::{
 
 use crate::api::calculate_telegram_delay;
 use crate::bot::{Data, Error, util::{self, Modal}};
-use crate::models::session::{RecruitDelay, Session, SESSION_TELEGRAM_BUFFER};
+use crate::session::{RecruitDelay, Session, SESSION_TELEGRAM_BUFFER};
 use crate::embeds::create_session_start_embed;
 
 pub async fn spawn_session_form(

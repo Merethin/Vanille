@@ -6,7 +6,7 @@ use log::error;
 use caramel::akari;
 
 use crate::bot::Data;
-use crate::models::report::ReportEntry;
+use vanille_models::report::ReportEntry;
 
 pub async fn akari_task(ctx: Context, data: Data) {
     let mut consumer = akari::create_consumer(

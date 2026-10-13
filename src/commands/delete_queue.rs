@@ -2,8 +2,8 @@ use poise::CreateReply;
 use log::warn;
 
 use crate::bot::{Context, Error};
-use crate::models::user_data::UserData;
 use crate::commands::check_command_authorization;
+use vanille_models::user_data::UserData;
 
 #[poise::command(slash_command)]
 pub async fn delete_queue(

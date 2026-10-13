@@ -6,8 +6,8 @@ use serenity::all::{
 use crate::api::calculate_telegram_delay;
 use crate::bot::{Data, Error, util::{self, Component}};
 use crate::embeds::create_telegram_embed;
-use crate::models::queue::QUEUE_TELEGRAM_BUFFER;
-use crate::models::report::ReportEntry;
+use crate::queue::QUEUE_TELEGRAM_BUFFER;
+use vanille_models::report::ReportEntry;
 
 pub async fn handle_recruit_oneshot(
     ctx: &Context, data: &Data, component: &ComponentInteraction

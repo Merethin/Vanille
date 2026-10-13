@@ -4,7 +4,7 @@ use serenity::all::{
 };
 
 use crate::{bot::{Data, Error, util::{self, Modal}}, embeds::create_template_embed};
-use crate::models::report::ReportEntry;
+use vanille_models::report::ReportEntry;
 
 pub async fn spawn_stat_time_form(
     ctx: &Context, _: &Data, component: &ComponentInteraction, custom_id: &str

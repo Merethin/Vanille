@@ -6,7 +6,8 @@ use serenity::all::{ButtonStyle, ChannelId, ChannelType, CreateActionRow, Create
 
 use caramel::ns::{UserAgent, format::prettify_name};
 
-use crate::models::{queue::{Nation, Queue}, report::TemplateStats, session::RecruitDelay};
+use crate::{queue::{Nation, Queue}, session::RecruitDelay};
+use vanille_models::report::TemplateStats;
 
 pub fn create_queue_embed(
     queue: &Queue,

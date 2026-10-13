@@ -6,7 +6,7 @@ use caramel::ns::format::{canonicalize_name, prettify_name};
 
 use crate::api::query_nation_data;
 use crate::bot::{Data, Error, util::{self, Modal}};
-use crate::models::user_data::UserData;
+use vanille_models::user_data::UserData;
 
 pub async fn spawn_setup_form(
     ctx: &Context, _: &Data, component: &ComponentInteraction

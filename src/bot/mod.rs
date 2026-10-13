@@ -8,8 +8,9 @@ use std::{collections::HashMap, error::Error as StdError, sync::Arc};
 
 use caramel::ns::{UserAgent, api::Client};
 
-use crate::{config::Config, models::{queue::Queue, session::Session, user_data::UserData}};
+use crate::{config::Config, queue::Queue, session::Session};
 use crate::commands::create_command_list;
+use vanille_models::user_data::UserData;
 
 use handler::event_handler;
 

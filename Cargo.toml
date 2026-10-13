@@ -4,10 +4,11 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+caramel = { path = "./caramel", features = ["akari", "log", "ns-api", "ns-xml"] }
+vanille-models = { path = "./models" }
 log = { version = "0.4.28", features = ["max_level_info", "release_max_level_warn"] }
 tokio = { version = "1.48.0", features = ["full"] }
-caramel = { path = "./caramel", features = ["akari", "log", "ns-api", "ns-xml"] }
-sqlx = { version = "0.8.6", features = ["postgres", "runtime-tokio"] }
+sqlx = { version = "0.9.0", features = ["postgres", "runtime-tokio"] }
 lapin = "3.7.2"
 itertools = "0.14.0"
 serde = "1.0.228"

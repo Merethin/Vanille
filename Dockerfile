@@ -7,19 +7,26 @@ RUN cargo init --bin .
 RUN mkdir -p ./caramel
 RUN cargo init --bin caramel
 
+RUN mkdir -p ./models
+RUN cargo init --bin models
+
 RUN apk add libressl-dev musl-dev
 
 COPY ./Cargo.lock ./Cargo.lock
 COPY ./Cargo.toml ./Cargo.toml
 COPY ./caramel/Cargo.lock ./caramel/Cargo.lock
 COPY ./caramel/Cargo.toml ./caramel/Cargo.toml
+COPY ./models/Cargo.lock ./models/Cargo.lock
+COPY ./models/Cargo.toml ./models/Cargo.toml
 
 RUN cargo build --release
 RUN rm src/*.rs
 RUN rm caramel/src/*.rs
+RUN rm models/src/*.rs
 
 COPY ./src ./src
 COPY ./caramel/src ./caramel/src
+COPY ./models/src ./models/src
 
 RUN rm ./target/release/deps/vanille*
 RUN cargo build --release

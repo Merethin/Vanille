@@ -3,7 +3,7 @@ use serenity::all::{CreateEmbed, CreateMessage, EditMessage};
 use caramel::ns::format::canonicalize_name;
 
 use crate::bot::{Context, Error};
-use crate::models::queue::{Queue, Filter};
+use crate::queue::{Queue, Filter};
 use crate::embeds::create_queue_embed;
 use crate::commands::check_command_authorization;
 

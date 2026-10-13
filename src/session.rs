@@ -4,9 +4,9 @@ use rand::seq::IndexedRandom;
 use serenity::all::{CacheHttp, ChannelId, Context, CreateMessage, MessageId, Timestamp, UserId};
 
 use crate::api::calculate_telegram_delay;
-use crate::embeds::create_pause_embed;
-use crate::{embeds::create_telegram_embed, models::report::ReportEntry};
+use crate::embeds::{create_pause_embed, create_telegram_embed};
 use crate::bot::{Data, Error};
+use vanille_models::report::ReportEntry;
 
 #[derive(Debug, Clone)]
 pub enum RecruitDelay {
