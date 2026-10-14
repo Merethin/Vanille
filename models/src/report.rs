@@ -61,11 +61,11 @@ impl ReportEntry {
             event,
             origin,
             queue: queue.get(),
-            queue_time: queue_time.timestamp(),
+            queue_time: queue_time.unix_timestamp(),
             recruiter: recruiter.get(),
             sender,
             template,
-            sent_time: sent_time.timestamp(),
+            sent_time: sent_time.unix_timestamp(),
             moved: false,
             moved_time: None
         }

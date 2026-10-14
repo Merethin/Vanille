@@ -1,0 +1,18 @@
+[package]
+name = "vanille-graph"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+caramel = { path = "../caramel", features = ["ns"] }
+vanille-models = { path = "../models" }
+chrono = "0.4.45"
+itertools = "0.15.0"
+plotpy = "1.24.0"
+tempfile = "3.27.0"
+dateparser = "0.3.1"
+tokio = { version = "1.53.3", features = ["full"] }
+sqlx = { version = "0.9.0", features = ["postgres", "runtime-tokio"] }
+clap = { version = "4.6.7", features = ["derive"] }
+serenity = { version = "0.12.5", default-features = false }
+dotenv = "0.15.0"
