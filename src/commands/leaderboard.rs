@@ -86,7 +86,7 @@ pub async fn leaderboard(
 
                 if selected_queues.is_empty() {
                     interaction.create_response(ctx.http(), CreateInteractionResponse::Message(
-                        CreateInteractionResponseMessage::new().content("Please select queues!")
+                        CreateInteractionResponseMessage::new().content("Please select queues!").ephemeral(true)
                     )).await?;
 
                     continue;
@@ -131,7 +131,7 @@ pub async fn leaderboard(
 
     if entries.is_empty() {
         reply.edit(
-            ctx, CreateReply::default().content("Error: no results recorded!").components(vec![])
+            ctx, CreateReply::default().content("Error: no results recorded!").components(vec![]).ephemeral(true)
         ).await?;
 
         return Ok(());
@@ -171,12 +171,12 @@ pub async fn leaderboard(
         CreateReply::default().content(format!(
             "Leaderboard from <t:{}:f> to <t:{}:f>:\n```\n{}\n```\nTotal: {}", 
             range.0, range.1, output, total
-        )).components(vec![])
+        )).components(vec![]).ephemeral(true)
     } else {
         CreateReply::default().content(format!(
             "All-time leaderboard:\n```\n{}\n```\nTotal: {}", 
             output, total
-        )).components(vec![])
+        )).components(vec![]).ephemeral(true)
     };
 
     reply.edit(ctx, builder).await?;
