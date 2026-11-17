@@ -53,16 +53,19 @@ async fn handle_ranged_leaders(
     ).await?;
 
     if leaders.is_empty() {
-        util::edit_reply(
-            ctx, Modal(modal), "Error: no results recorded for this time period!"
+        modal.edit_response(ctx.http(), 
+            EditInteractionResponse::new().content(
+                "Error: no results recorded for this time period!"
+            ).embeds(vec![]).components(vec![])
         ).await?;
     } else {
-        util::edit_reply(
-            ctx, Modal(modal), 
-            &format!(
-                "Leaderboard from <t:{}:f> to <t:{}:f>:\n```\n{}\n```", 
-                range.0, range.1, leaders.iter().map(|(nation, count)| format!("{nation}: {count}")).join("\n")
-            )
+        modal.edit_response(ctx.http(), 
+        EditInteractionResponse::new().content(
+                &format!(
+                    "Leaderboard from <t:{}:f> to <t:{}:f>:\n```\n{}\n```", 
+                    range.0, range.1, leaders.iter().map(|(nation, count)| format!("{nation}: {count}")).join("\n")
+                )
+            ).embeds(vec![]).components(vec![])
         ).await?;
     }
 
@@ -77,8 +80,10 @@ async fn handle_ranged_csv(
     ).await?;
 
     if entries.is_empty() {
-        util::edit_reply(
-            ctx, Modal(modal), "Error: no results recorded for this time period!"
+        modal.edit_response(ctx.http(), 
+            EditInteractionResponse::new().content(
+                "Error: no results recorded for this time period!"
+            ).embeds(vec![]).components(vec![])
         ).await?;
     } else {
         let mut output: Vec<u8> = Vec::new();
@@ -101,7 +106,7 @@ ctx.http(), EditInteractionResponse::new().content(format!(
                 "Telegram data from <t:{}:f> to <t:{}:f>:", range.0, range.1
             )).new_attachment(
                 CreateAttachment::bytes(output, "vanille-report.csv")
-            )
+            ).embeds(vec![]).components(vec![])
         ).await?;
     }
 
@@ -118,8 +123,10 @@ async fn handle_ranged_graph(
     ).await?;
 
     if entries.is_empty() {
-        util::edit_reply(
-            ctx, Modal(modal), "Error: no results recorded for this time period!"
+        modal.edit_response(ctx.http(), 
+            EditInteractionResponse::new().content(
+                "Error: no results recorded for this time period!"
+            ).embeds(vec![]).components(vec![])
         ).await?;
     } else {
         let output: Vec<u8> = match kind {
@@ -130,8 +137,10 @@ async fn handle_ranged_graph(
             "sender_delivery_time" => generate_sender_delivery_time_plot(region, &entries).await?,
             "successful_recruits" => generate_successful_recruits_plot(region, &entries).await?,
             _ => {
-                util::edit_reply(
-                    ctx, Modal(modal), "Error: no graph type selected!"
+                modal.edit_response(ctx.http(), 
+                    EditInteractionResponse::new().content(
+                        "Error: no graph type selected!"
+                    ).embeds(vec![]).components(vec![])
                 ).await?;
                 return Ok(());
             }
@@ -142,7 +151,7 @@ ctx.http(), EditInteractionResponse::new().content(format!(
                 "Graph from <t:{}:f> to <t:{}:f>:", range.0, range.1
             )).new_attachment(
                 CreateAttachment::bytes(output, "vanille-graph.png")
-            )
+            ).embeds(vec![]).components(vec![])
         ).await?;
     }
 
