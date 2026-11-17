@@ -13,7 +13,7 @@ RUN cargo init --bin models
 RUN mkdir -p ./graph
 RUN cargo init --bin graph
 
-RUN apk add libressl-dev musl-dev py3-matplotlib
+RUN apk add libressl-dev libressl-static musl-dev py3-matplotlib
 
 COPY ./Cargo.lock ./Cargo.lock
 COPY ./Cargo.toml ./Cargo.toml
