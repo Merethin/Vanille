@@ -32,9 +32,7 @@ pub async fn handle_component_interaction(
         "statistics" => click::create_statistics_menu(ctx, data, component).await,
         // Statistics menu buttons
         "stat-leaders-all" => click::handle_stat_leaders_all(ctx, data, component).await,
-        "stat-csv-all" => click::handle_stat_csv_all(ctx, data, component).await,
-        "stat-leaders-custom" => form::spawn_stat_time_form(ctx, data, component, "stat-leaders-custom-report").await,
-        "stat-csv-custom" => form::spawn_stat_time_form(ctx, data, component, "stat-csv-custom-report").await,
+        "stat-custom" => form::spawn_stat_time_form(ctx, data, component, "stat-custom-report").await,
         "stat-templates-top" => click::handle_stat_templates_top(ctx, data, component).await,
         "stat-template-check" => form::spawn_template_id_form(ctx, data, component).await,
         // Session DM buttons
@@ -69,8 +67,7 @@ pub async fn handle_modal_interaction(
         match modal.data.custom_id.as_str() {
             "setup-modal" => form::process_setup_form(ctx, data, modal).await,
             "stream-start-modal" => form::process_session_form(ctx, data, modal).await,
-            "stat-leaders-custom-report" => form::process_stat_leaders_custom_form(ctx, data, modal).await,
-            "stat-csv-custom-report" => form::process_stat_csv_custom_form(ctx, data, modal).await,
+            "stat-custom-report" => form::process_stat_ranged_form(ctx, data, modal).await,
             "stat-template-check-report" => form::process_stat_template_check_form(ctx, data, modal).await,
             _ => Ok(())
         }

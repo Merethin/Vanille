@@ -5,7 +5,7 @@ mod queue;
 
 pub use statistics::{
     spawn_stat_time_form, spawn_template_id_form,
-    process_stat_leaders_custom_form, process_stat_csv_custom_form, 
+    process_stat_ranged_form, 
     extract_time_range_from_modal,
     process_stat_template_check_form
 };

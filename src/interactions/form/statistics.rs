@@ -1,10 +1,13 @@
-use itertools::Itertools;
-use serenity::all::{
-    ActionRowComponent, CacheHttp, ComponentInteraction, Context, CreateActionRow, CreateAttachment, CreateInputText, CreateInteractionResponse, CreateModal, EditInteractionResponse, InputTextStyle, ModalInteraction
-};
+use std::time::Duration;
 
-use crate::{bot::{Data, Error, util::{self, Modal}}, embeds::create_template_embed};
+use itertools::Itertools;
+use serenity::{all::{
+    ActionRowComponent, CacheHttp, ComponentInteraction, Context, CreateActionRow, CreateAttachment, CreateInputText, CreateInteractionResponse, CreateModal, EditInteractionResponse, InputTextStyle, ModalInteraction
+}, builder::CreateInteractionResponseMessage, collector::ComponentInteractionCollector, model::application::ComponentInteractionDataKind};
+
+use crate::{bot::{Data, Error, util::{self, Modal}}, embeds::{create_ranged_statistics_embed, create_template_embed}};
 use vanille_models::report::ReportEntry;
+use vanille_graph::*;
 
 pub async fn spawn_stat_time_form(
     ctx: &Context, _: &Data, component: &ComponentInteraction, custom_id: &str
@@ -42,24 +45,9 @@ pub async fn spawn_template_id_form(
     Ok(())
 }
 
-pub async fn process_stat_leaders_custom_form(
-    ctx: &Context, data: &Data, modal: &ModalInteraction
+async fn handle_ranged_leaders(
+    ctx: &Context, data: &Data, modal: &ModalInteraction, range: (u64, u64)
 ) -> Result<(), Error> {
-    if !data.inner.queues.lock().await.contains_key(&modal.channel_id) {
-        util::direct_reply(
-            ctx, Modal(modal),
-            "Invalid interaction: no queue linked to channel", true
-        ).await?;
-
-        return Ok(());
-    }
-
-    modal.defer_ephemeral(ctx.http()).await?;
-
-    let Some(range) = extract_time_range_from_modal(ctx, modal).await? else {
-        return Ok(());
-    };
-
     let leaders = ReportEntry::count_by_nation(
         &data.inner.pool, &[modal.channel_id.get() as i64], Some(range)
     ).await?;
@@ -81,24 +69,9 @@ pub async fn process_stat_leaders_custom_form(
     Ok(())
 }
 
-pub async fn process_stat_csv_custom_form(
-    ctx: &Context, data: &Data, modal: &ModalInteraction
+async fn handle_ranged_csv(
+    ctx: &Context, data: &Data, modal: &ModalInteraction, range: (u64, u64)
 ) -> Result<(), Error> {
-    if !data.inner.queues.lock().await.contains_key(&modal.channel_id) {
-        util::direct_reply(
-            ctx, Modal(modal),
-            "Invalid interaction: no queue linked to channel", true
-        ).await?;
-
-        return Ok(());
-    }
-
-    modal.defer_ephemeral(ctx.http()).await?;
-
-    let Some(range) = extract_time_range_from_modal(ctx, modal).await? else {
-        return Ok(());
-    };
-
     let entries = ReportEntry::query(
         &data.inner.pool, modal.channel_id, Some(range)
     ).await?;
@@ -133,6 +106,115 @@ ctx.http(), EditInteractionResponse::new().content(format!(
     }
 
     Ok(())
+}
+
+async fn handle_ranged_graph(
+    ctx: &Context, data: &Data, 
+    modal: &ModalInteraction, range: (u64, u64),
+    region: &str, kind: &str
+) -> Result<(), Error> {
+    let entries = ReportEntry::query(
+        &data.inner.pool, modal.channel_id, Some(range)
+    ).await?;
+
+    if entries.is_empty() {
+        util::edit_reply(
+            ctx, Modal(modal), "Error: no results recorded for this time period!"
+        ).await?;
+    } else {
+        let output: Vec<u8> = match kind {
+            "delivery_time" => generate_delivery_time_plot(region, &entries).await?,
+            "queue_activity" => generate_queue_activity_plot(region, &entries).await?,
+            "sender_activity" => generate_sender_activity_plot(region, &entries).await?,
+            "sender_category" => generate_sender_category_plot(region, &entries).await?,
+            "sender_delivery_time" => generate_sender_delivery_time_plot(region, &entries).await?,
+            "successful_recruits" => generate_successful_recruits_plot(region, &entries).await?,
+            _ => {
+                util::edit_reply(
+                    ctx, Modal(modal), "Error: no graph type selected!"
+                ).await?;
+                return Ok(());
+            }
+        };
+
+        modal.edit_response(
+ctx.http(), EditInteractionResponse::new().content(format!(
+                "Graph from <t:{}:f> to <t:{}:f>:", range.0, range.1
+            )).new_attachment(
+                CreateAttachment::bytes(output, "vanille-graph.png")
+            )
+        ).await?;
+    }
+
+    Ok(())
+}
+
+pub async fn process_stat_ranged_form(
+    ctx: &Context, data: &Data, modal: &ModalInteraction
+) -> Result<(), Error> {
+    let region = data.inner.queues.lock().await.get(&modal.channel_id).map(|q| q.region.clone());
+
+    if region.is_none() {
+        util::direct_reply(
+            ctx, Modal(modal),
+            "Invalid interaction: no queue linked to channel", true
+        ).await?;
+
+        return Ok(());
+    }
+
+    modal.defer_ephemeral(ctx.http()).await?;
+
+    let Some(range) = extract_time_range_from_modal(ctx, modal).await? else {
+        return Ok(());
+    };
+
+    let (embed, components) = create_ranged_statistics_embed(range);
+    modal.edit_response(ctx.http(), EditInteractionResponse::new().embed(embed).components(components)).await?;
+
+    let message = modal.get_response(ctx.http()).await?;
+
+    let mut kind: Option<String> = None;
+
+    while let Some(interaction) = ComponentInteractionCollector::new(ctx).message_id(message.id).timeout(Duration::from_secs(120)).await {
+        match &interaction.data.kind {
+            ComponentInteractionDataKind::StringSelect { values } => {
+                kind = values.get(0).cloned();
+                interaction.create_response(ctx.http(), CreateInteractionResponse::Acknowledge).await?;
+                continue;
+            },
+            ComponentInteractionDataKind::Button => {
+                match interaction.data.custom_id.as_str() {
+                    "stat-leaders-custom" => {
+                        interaction.create_response(ctx.http(), CreateInteractionResponse::Acknowledge).await?;
+                        return handle_ranged_leaders(ctx, data, modal, range).await;
+                    },
+                    "stat-csv-custom" => {
+                        interaction.create_response(ctx.http(), CreateInteractionResponse::Acknowledge).await?;
+                        return handle_ranged_csv(ctx, data, modal, range).await;
+                    },
+                    "stat-graph-custom" => {
+                        match kind {
+                            Some(kind) => {
+                                interaction.create_response(ctx.http(), CreateInteractionResponse::Acknowledge).await?;
+                                return handle_ranged_graph(ctx, data, modal, range, &region.unwrap(), &kind).await;
+                            },
+                            None => {
+                                interaction.create_response(ctx.http(), CreateInteractionResponse::Message(
+                                    CreateInteractionResponseMessage::new().content("Error: no graph kind selected!").ephemeral(true)
+                                )).await?;
+                            }
+                        }
+                    }
+                    _ => {},
+                }
+            },
+            _ => {},
+        }
+    }
+
+    modal.edit_response(ctx.http(), EditInteractionResponse::default().components(vec![])).await?;
+    return Ok(());
 }
 
 pub async fn extract_time_range_from_modal(

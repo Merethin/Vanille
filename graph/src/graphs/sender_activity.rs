@@ -11,7 +11,7 @@ use crate::grouping::sender_activity::group_data;
 pub async fn generate_sender_activity_plot(
     region: &str,
     entries: &[ReportEntry]
-) -> Result<Vec<u8>, Box<dyn Error>> {
+) -> Result<Vec<u8>, Box<dyn Error + Send + Sync>> {
     let (values, labels) = group_data(entries);
     let mut generator = RandomColor::new();
     generator.luminosity(Luminosity::Bright);

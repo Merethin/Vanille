@@ -12,7 +12,7 @@ use crate::labels::CATEGORY_LABELS;
 pub async fn generate_queue_activity_plot(
     region: &str,
     entries: &[ReportEntry]
-) -> Result<Vec<u8>, Box<dyn Error>> {
+) -> Result<Vec<u8>, Box<dyn Error + Send + Sync>> {
     let values = group_data(entries);
 
     let tmp_dir = TempDir::new()?;

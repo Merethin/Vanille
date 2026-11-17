@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 
 use itertools::Itertools;
 use regex::Regex;
-use serenity::all::{ButtonStyle, ChannelId, ChannelType, CreateActionRow, CreateButton, CreateEmbed, CreateSelectMenu, CreateSelectMenuKind, FormattedTimestamp, FormattedTimestampStyle, Mentionable, RoleId, UserId};
+use serenity::{all::{ButtonStyle, ChannelId, ChannelType, CreateActionRow, CreateButton, CreateEmbed, CreateSelectMenu, CreateSelectMenuKind, FormattedTimestamp, FormattedTimestampStyle, Mentionable, RoleId, UserId}, builder::CreateSelectMenuOption};
 
 use caramel::ns::{UserAgent, format::prettify_name};
 
@@ -104,15 +104,39 @@ pub fn create_statistics_embed() -> (CreateEmbed, Vec<CreateActionRow>) {
     let components = vec![
         CreateActionRow::Buttons(vec![
             CreateButton::new("stat-leaders-all").label("Leaderboard (All Time)").style(ButtonStyle::Danger),
-            CreateButton::new("stat-csv-all").label("CSV (All Time)").style(ButtonStyle::Success),
-        ]),
-        CreateActionRow::Buttons(vec![
-            CreateButton::new("stat-leaders-custom").label("Leaderboard (Custom)").style(ButtonStyle::Danger),
-            CreateButton::new("stat-csv-custom").label("CSV (Custom)").style(ButtonStyle::Success),
+            CreateButton::new("stat-custom").label("Custom Range").style(ButtonStyle::Success),
         ]),
         CreateActionRow::Buttons(vec![
             CreateButton::new("stat-templates-top").label("Top Templates").style(ButtonStyle::Danger),
             CreateButton::new("stat-template-check").label("Check Template").style(ButtonStyle::Success),
+        ]),
+    ];
+
+    (embed, components)
+}
+
+pub fn create_ranged_statistics_embed(range: (u64, u64)) -> (CreateEmbed, Vec<CreateActionRow>) {
+    let embed = CreateEmbed::new().title("Recruitment Statistics").description(
+        format!("From <t:{}:f> to <t:{}:f>", range.0, range.1)
+    );
+
+    let components = vec![
+        CreateActionRow::SelectMenu(
+            CreateSelectMenu::new("graph-kind", CreateSelectMenuKind::String { 
+                options: vec![
+                    CreateSelectMenuOption::new("Recruitment Activity by Hour of Day", "delivery_time"),
+                    CreateSelectMenuOption::new("Queue Activity by Hour of Day", "queue_activity"),
+                    CreateSelectMenuOption::new("Sender Activity by Hour of Day", "sender_activity"),
+                    CreateSelectMenuOption::new("Sender Leaderboard with Categories", "sender_category"),
+                    CreateSelectMenuOption::new("Sender Leaderboard with Delivery Intervals", "sender_delivery_time"),
+                    CreateSelectMenuOption::new("Successful Recruits by Delivery Interval", "successful_recruits")
+                ]
+            })
+        ),
+        CreateActionRow::Buttons(vec![
+            CreateButton::new("stat-leaders-custom").label("Leaderboard").style(ButtonStyle::Danger),
+            CreateButton::new("stat-csv-custom").label("Raw Data").style(ButtonStyle::Secondary),
+            CreateButton::new("stat-graph-custom").label("Graph").style(ButtonStyle::Success),
         ]),
     ];
 
